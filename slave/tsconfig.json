@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES5",
+    "rootDir": "src/",
+    "outDir": "dist/",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "importsNotUsedAsValues": "remove",
+    "removeComments": true
+  }
+}
