@@ -1,5 +1,7 @@
 import { readFileSync } from 'fs';
 import { Configuration } from './types';
+import { Handler, NextFunction, Request, Response } from 'express';
+
 enum Colors {
     Reset = '\x1b[0m',
     Red = '\x1b[31m',
@@ -47,4 +49,18 @@ export function createNetworkName(length) {
         );
     }
     return result;
+}
+
+export function getAuthKey(req: Request): string | null {
+    const headerValue = req.headers['authorization'];
+    if (!headerValue) return null;
+    else return headerValue.split(' ').pop();
+}
+
+export function validateAuth(apiKey: string): Handler {
+    return function (req: Request, res: Response, next: NextFunction) {
+        const authKey: string | null = getAuthKey(req);
+        if (authKey === apiKey) next();
+        else res.status(401).send({ status: 'unauthorized' });
+    };
 }

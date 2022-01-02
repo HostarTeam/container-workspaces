@@ -1,6 +1,6 @@
 import express, { Application, Router } from 'express';
 import { initMainRouter } from './lib/routers/main';
-import { printSuccess } from './lib/utils';
+import { getAuthKey, printSuccess, validateAuth } from './lib/utils';
 
 export default class Slave {
     private apiKey: string;
@@ -27,7 +27,7 @@ export default class Slave {
     private initWebApp(): void {
         this.webApp.use(express.json());
         this.webApp.use(express.urlencoded({ extended: true }));
-
+        this.webApp.use(validateAuth(this.apiKey));
         // Routers
         this.webApp.use('/api', this.mainRouter);
 
