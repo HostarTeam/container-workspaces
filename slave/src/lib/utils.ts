@@ -39,22 +39,10 @@ export async function readConfFile(): Promise<Configuration> {
     }
 }
 
-export function createNetworkName(length) {
-    var result = '';
-    var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-    var charactersLength = characters.length;
-    for (var i = 0; i < length; i++) {
-        result += characters.charAt(
-            Math.floor(Math.random() * charactersLength)
-        );
-    }
-    return result;
-}
-
 export function getAuthKey(req: Request): string | null {
     const headerValue = req.headers['authorization'];
     if (!headerValue) return null;
-    else return headerValue.split(' ').pop();
+    else return headerValue.split(/ +/).pop();
 }
 
 export function validateAuth(apiKey: string): Handler {

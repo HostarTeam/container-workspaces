@@ -28,6 +28,7 @@ export default class Slave {
         this.webApp.use(express.json());
         this.webApp.use(express.urlencoded({ extended: true }));
         this.webApp.use(validateAuth(this.apiKey));
+
         // Routers
         this.webApp.use('/api', this.mainRouter);
 
