@@ -2,7 +2,7 @@ import express, { Application, Router } from 'express';
 import { initMainRouter } from './lib/routers/main';
 import { getAuthKey, printSuccess, validateAuth } from './lib/utils';
 
-export default class Slave {
+export default class ContainerWorkspaces {
     private apiKey: string;
     public address: string;
     public port: number;

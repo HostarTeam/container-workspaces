@@ -1,7 +1,7 @@
-import Slave from '../../Slave';
+import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { Router, Request, Response } from 'express';
 
-export function initMainRouter(this: Slave): void {
+export function initMainRouter(this: ContainerWorkspaces): void {
     this.mainRouter = Router();
     const router: Router = this.mainRouter;
 
