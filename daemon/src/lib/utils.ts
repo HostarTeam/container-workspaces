@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { Configuration } from './types';
 import { Handler, NextFunction, Request, Response } from 'express';
+import ProxmoxConnection from './proxmox/ProxmoxConnection';
 
 enum Colors {
     Reset = '\x1b[0m',
@@ -22,7 +23,7 @@ export function printSuccess(message): void {
 }
 
 export async function readConfFile(): Promise<Configuration> {
-    const fileLocation: string = '/etc/docker-workspaces/server.json';
+    const fileLocation: string = '/etc/container-workspaces/server.json';
     let fileContent = '';
     try {
         fileContent = await readFileSync(fileLocation, 'utf8');
@@ -47,8 +48,15 @@ export function getAuthKey(req: Request): string | null {
 
 export function validateAuth(apiKey: string): Handler {
     return function (req: Request, res: Response, next: NextFunction) {
+        if (req.path.startsWith('/api/agent')) return next();
         const authKey: string | null = getAuthKey(req);
         if (authKey === apiKey) next();
         else res.status(401).send({ status: 'unauthorized' });
     };
+}
+
+export async function getNodesName(this: ProxmoxConnection): Promise<string[]> {
+    const nodesArr = await this.getNodes();
+    const nodesName = nodesArr.map((x) => x.node);
+    return nodesName;
 }
