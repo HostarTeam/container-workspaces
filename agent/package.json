@@ -1,0 +1,31 @@
+{
+    "name": "container-workspaces-agent",
+    "version": "1.0.0",
+    "description": "",
+    "main": "dist/app.js",
+    "scripts": {
+        "dev": "nodemon src/app.ts",
+        "start": "node .",
+        "build": "tsc -p ."
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ubarilan/container-workspaces.git"
+    },
+    "author": "ubarilan",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/ubarilan/container-workspaces/issues"
+    },
+    "homepage": "https://github.com/ubarilan/container-workspaces#readme",
+    "dependencies": {
+        "node-fetch": "^2.6.6",
+        "passwd-linux": "^2.0.0",
+        "ws": "^8.4.0"
+    },
+    "devDependencies": {
+        "@types/node": "^17.0.7",
+        "@types/node-fetch": "^2.5.12",
+        "@types/ws": "^8.2.2"
+    }
+}
