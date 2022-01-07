@@ -4,6 +4,7 @@ import {
     getInitCommands,
     postCTDetails,
     runInitCommands,
+    setAsRan,
 } from './lib/utils';
 import { AgentConfiguration } from './lib/types';
 
@@ -17,6 +18,7 @@ export async function initMain(config: AgentConfiguration): Promise<void> {
     });
 
     const initCommands: string[] = await getInitCommands(config.apiServer);
-
     await runInitCommands(initCommands, config.apiServer);
+
+    await setAsRan();
 }

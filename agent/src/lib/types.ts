@@ -1,5 +1,6 @@
 export interface AgentConfiguration {
     apiServer: string;
+    socketServer: string;
 }
 
 export interface CommandErrorReport {

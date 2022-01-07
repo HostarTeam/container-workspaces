@@ -1,3 +1,4 @@
+import Agent from './Agent';
 import { initMain } from './initAgent';
 import { AgentConfiguration } from './lib/types';
 import { checkIfInitHadRan, readConfFile } from './lib/utils';
@@ -7,8 +8,10 @@ async function main(): Promise<void> {
     const initHadRan: boolean = await checkIfInitHadRan();
     if (!initHadRan) {
         console.log('Running initialization agent');
-        initMain(config);
+        await initMain(config);
     }
+
+    const agent = new Agent(config);
 }
 
 main();

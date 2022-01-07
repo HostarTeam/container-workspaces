@@ -1,3 +1,5 @@
+import MessageRouting from '../ws/routing/MessageRouting';
+
 export interface Configuration {
     apiKey: string;
     address: string;
@@ -18,3 +20,16 @@ export interface Node {
     ssl_fingerprint: string;
     uptime: number;
 }
+
+export interface CommandError {
+    command: string;
+    stderr: string;
+    stdout: string;
+    exitCode: number;
+    stack: string;
+    message: string;
+}
+
+export type CommandType = 'realtime' | 'init';
+
+export type MessageRoutingHandler = MessageRouting[keyof MessageRouting];

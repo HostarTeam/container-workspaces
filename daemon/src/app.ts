@@ -1,5 +1,5 @@
 import { readConfFile } from './lib/utils';
-import { Configuration } from './lib/types';
+import { Configuration } from './lib/typing/types';
 import ContainerWorkspaces from './ContainerWorkspaces';
 import { config } from 'dotenv';
 config();

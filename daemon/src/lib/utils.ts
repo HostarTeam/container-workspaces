@@ -1,7 +1,9 @@
 import { readFileSync } from 'fs';
-import { Configuration } from './types';
+import { Configuration } from './typing/types';
 import { Handler, NextFunction, Request, Response } from 'express';
 import ProxmoxConnection from './proxmox/ProxmoxConnection';
+import ContainerWorkspaces from '../ContainerWorkspaces';
+import log4js, { Log4js, Logger } from 'log4js';
 
 enum Colors {
     Reset = '\x1b[0m',
@@ -40,6 +42,24 @@ export async function readConfFile(): Promise<Configuration> {
     }
 }
 
+export async function readInitCommandsFile(): Promise<Configuration> {
+    const fileLocation: string = '/etc/container-workspaces/initcommands.json';
+    let fileContent = '';
+    try {
+        fileContent = await readFileSync(fileLocation, 'utf8');
+    } catch (error: unknown) {
+        printError(`Could not read from config file at ${fileLocation}`);
+        process.exit(1);
+    }
+    try {
+        const config: Configuration = JSON.parse(fileContent);
+        return config;
+    } catch (error: unknown) {
+        printError('Could not parse config file');
+        process.exit(1);
+    }
+}
+
 export function getAuthKey(req: Request): string | null {
     const headerValue = req.headers['authorization'];
     if (!headerValue) return null;
@@ -59,4 +79,37 @@ export async function getNodesName(this: ProxmoxConnection): Promise<string[]> {
     const nodesArr = await this.getNodes();
     const nodesName = nodesArr.map((x) => x.node);
     return nodesName;
+}
+
+export async function checkIP(
+    this: ContainerWorkspaces,
+    ip: string
+): Promise<boolean> {
+    const sql = 'SELECT ipv4 from cts';
+    let [ips]: Array<any[]> = await this.mysqlConnection.query(sql);
+    ips = ips.map((x) => x['ipv4']);
+
+    return ips.includes(ip);
+}
+
+export function createLoggers(logsName: string[], logDir: string): Log4js {
+    let confObj = {
+        appenders: {
+            all: {
+                type: 'console',
+            },
+        },
+        categories: {
+            default: { appenders: ['all'], level: 'all' },
+        },
+    };
+    for (const logName of logsName) {
+        confObj.appenders[logName] = {
+            type: 'file',
+            filename: `${logDir}/${logName.toLowerCase()}.log`,
+        };
+        confObj.categories[logName] = { appenders: [logName], level: 'all' };
+    }
+
+    return log4js.configure(confObj);
 }

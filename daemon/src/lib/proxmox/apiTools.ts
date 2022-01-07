@@ -1,15 +1,15 @@
 import fetch, { Response } from 'node-fetch';
 import ProxmoxConnection from './ProxmoxConnection';
-import { printError } from '../utils';
-import { Node } from '../types';
+import { getNodesName, printError } from '../utils';
+import { Node } from '../typing/types';
 
 export function call(
     this: ProxmoxConnection,
     path: string,
     method: string,
-    body?: string
+    body: string = null
 ): Promise<any> {
-    let promise = new Promise((resolve, reject) => {
+    let promise = new Promise(async (resolve, reject) => {
         let options = {
             headers: {
                 'Content-Type': 'application/json',
@@ -21,10 +21,17 @@ export function call(
         if (['POST', 'PUT', 'DELETE'].includes(method.toUpperCase()))
             options.headers['CSRFPreventionToken'] = this.csrfPreventionToken;
         if (body) (options as any).body = JSON.stringify(body);
-        fetch(`${this.basicURL}/${path}/`, options)
-            .then((res) => res.json())
-            .then((res) => resolve(res))
-            .catch((err) => reject(err));
+        try {
+            let res = await fetch(`${this.basicURL}/${path}/`, options);
+            if (res.status == 401) {
+                await this.getAuthKeys();
+                return await this.call(path, method, body);
+            }
+            res = await res.json();
+            resolve(res);
+        } catch (err) {
+            reject(err);
+        }
     });
     return promise;
 }

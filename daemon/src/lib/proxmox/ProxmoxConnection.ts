@@ -1,8 +1,8 @@
 import { Response } from 'node-fetch';
-import { httpProtocol } from '../types';
-import { printSuccess } from '../utils';
+import { httpProtocol } from '../typing/types';
+import { getNodesName, printSuccess } from '../utils';
 import { call, getAuthKeys, getNodes } from './apiTools';
-import { Node } from '../types';
+import { Node } from '../typing/types';
 
 export default class ProxmoxConnection {
     protected hostname: string;
@@ -21,6 +21,7 @@ export default class ProxmoxConnection {
         body?: string
     ) => Promise<any> = call;
     public getNodes: () => Promise<Node[]> = getNodes;
+    public getNodesName: () => Promise<string[]> = getNodesName;
 
     constructor({ hostname, protocol, username, password, port = 8006 }) {
         this.hostname = hostname;
@@ -29,9 +30,7 @@ export default class ProxmoxConnection {
         this.password = password;
         this.port = port;
         this.intialize();
-        this.connect().then(() => {
-            this.getNodes();
-        });
+        this.connect().then(() => {});
     }
 
     private intialize() {

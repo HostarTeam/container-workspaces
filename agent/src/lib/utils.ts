@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import passwd from 'passwd-linux';
 import { AgentConfiguration, CommandErrorReport } from './types';
 import fetch, { Response } from 'node-fetch';
@@ -133,6 +133,12 @@ export async function reportCommandErrors(
             body: JSON.stringify(report),
         }
     );
+}
+
+export async function setAsRan(
+    location = '/var/local/cw/initran'
+): Promise<void> {
+    await writeFileSync(location, '1');
 }
 
 enum Colors {
