@@ -3,7 +3,6 @@ import WebSocket, { RawData } from 'ws';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { InvalidMessageError, MessageData } from '../typing/MessageData';
 import { printError } from '../utils';
-import { wsCommand } from './routing/wsCommand';
 
 export function handleMessage(
     this: ContainerWorkspaces,
@@ -20,15 +19,17 @@ export function handleMessage(
         this.wsCommand(req, messageData, socket);
     } catch (err: unknown) {
         if (err instanceof SyntaxError) {
-            printError(
+            this.wsLogger.error(
                 `Could not parse message content from ${
                     req.socket.remoteAddress
                 }. Message content: ${message.toString()} `
             );
         } else if (err instanceof InvalidMessageError) {
-            printError(err.message);
+            this.wsLogger.error(
+                `Invalid message data from ${req.socket.remoteAddress} - ${err}`
+            );
         } else {
-            printError('Unknown error');
+            this.wsLogger.error(err);
         }
     }
 }

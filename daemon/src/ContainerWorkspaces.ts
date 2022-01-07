@@ -7,7 +7,7 @@ import express, {
     Handler,
 } from 'express';
 import { createServer, IncomingMessage, Server } from 'http';
-import log4js, { Log4js, Logger } from 'log4js';
+import { Log4js, Logger } from 'log4js';
 import { initMainRouter } from './lib/routers/main';
 import { initAgentRouter } from './lib/routers/agent';
 import {
@@ -72,7 +72,7 @@ export default class ContainerWorkspaces {
         this.port = port;
         this.dockerNetworkInterface = dockerNetworkInterface;
 
-        this.configureLogger();
+        this.configureLoggers();
 
         this.webApp = express();
         this.initRouters();
@@ -94,6 +94,7 @@ export default class ContainerWorkspaces {
             protocol: PVE_PROTOCOL,
             username: PVE_USERNAME,
             password: PVE_PASSWORD,
+            pveLogger: this.pveLogger,
         });
 
         this.mysqlConnection = this.connectToDatabase({
@@ -158,7 +159,7 @@ export default class ContainerWorkspaces {
         });
     }
 
-    private configureLogger(logDir: string = '/var/log/cw'): void {
+    private configureLoggers(logDir: string = '/var/log/cw'): void {
         const logsName = ['main', 'http', 'ws', 'pve'];
         this.log4js = createLoggers(logsName, logDir);
 

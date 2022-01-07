@@ -22,14 +22,27 @@ export function call(
             options.headers['CSRFPreventionToken'] = this.csrfPreventionToken;
         if (body) (options as any).body = JSON.stringify(body);
         try {
-            let res = await fetch(`${this.basicURL}/${path}/`, options);
+            var res: Response = await fetch(
+                `${this.basicURL}/${path}/`,
+                options
+            );
             if (res.status == 401) {
+                this.pveLogger.warn(
+                    `${method.toUpperCase()} - ${path} - ${res.status}`
+                );
                 await this.getAuthKeys();
                 return await this.call(path, method, body);
             }
-            res = await res.json();
-            resolve(res);
+            this.pveLogger.info(
+                `${method.toUpperCase()} - ${path} - ${res.status}`
+            );
+            resolve(await res.json());
         } catch (err) {
+            this.pveLogger.error(
+                `${method.toUpperCase()} - ${path} - ${
+                    res.status || 'no status code'
+                } - ${err.message || 'no error message'}`
+            );
             reject(err);
         }
     });
@@ -56,6 +69,7 @@ export async function getAuthKeys(this: ProxmoxConnection): Promise<void> {
         this.authCookie = data.ticket;
         this.csrfPreventionToken = data.CSRFPreventionToken;
     } catch (error) {
+        this.pveLogger.fatal(`Can't connect to the pve server`);
         printError(error);
         throw Error("Can't connect to server");
     }
