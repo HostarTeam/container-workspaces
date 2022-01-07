@@ -1,14 +1,28 @@
 import Agent from './Agent';
-import { initMain } from './initAgent';
+import InitAgent from './InitAgent';
 import { AgentConfiguration } from './lib/types';
-import { checkIfInitHadRan, readConfFile } from './lib/utils';
+import {
+    checkIfInitHadRan,
+    printError,
+    printFatal,
+    readConfFile,
+} from './lib/utils';
+import { config } from 'dotenv';
+config();
 
 async function main(): Promise<void> {
     const config: AgentConfiguration = await readConfFile();
     const initHadRan: boolean = await checkIfInitHadRan();
+    const isDevelopment: boolean = process.env.DEVELOPMENT === '1';
+
     if (!initHadRan) {
-        console.log('Running initialization agent');
-        await initMain(config);
+        try {
+            const initAgent = new InitAgent(config, isDevelopment);
+            await initAgent.runInit();
+        } catch (err: unknown) {
+            printError(<String>err);
+            printFatal('Could not finish executing init agent');
+        }
     }
 
     const agent = new Agent(config);
