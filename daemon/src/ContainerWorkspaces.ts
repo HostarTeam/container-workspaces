@@ -23,14 +23,14 @@ import { ConnectionOptions } from 'mysql2/typings/mysql';
 import { handleMessage } from './lib/ws/wsMessageHandler';
 import { MessageData } from './lib/typing/MessageData';
 import { wsCommand } from './lib/ws/routing/wsCommand';
-import { sendMessageToAgent } from './lib/ws/commandAgent';
+import { sendCommandToAgent } from './lib/ws/commandAgent';
+import { Task } from './lib/typing/Task';
 
 export default class ContainerWorkspaces {
     private httpServer: Server;
     private apiKey: string;
     private address: string;
     private port: number;
-    protected dockerNetworkInterface: string;
 
     private log4js: Log4js;
     public mainLogger: Logger;
@@ -53,10 +53,7 @@ export default class ContainerWorkspaces {
         socket: WebSocket
     ) => Promise<void> = wsCommand;
     protected checkIP: (ip: string) => Promise<boolean> = checkIP;
-    protected sendMessageToAgent: (
-        agentAddress: string,
-        messageData: MessageData
-    ) => void = sendMessageToAgent;
+    protected sendCommandToAgent: (task: Task) => void = sendCommandToAgent;
 
     protected webApp: Application;
     protected wss: WebSocketServer;
@@ -66,12 +63,10 @@ export default class ContainerWorkspaces {
     protected ProxmoxClient: ProxmoxConnection;
     public mysqlConnection: any;
 
-    constructor({ apiKey, address, port, dockerNetworkInterface }) {
+    constructor({ apiKey, address, port }) {
         this.apiKey = apiKey;
         this.address = address;
         this.port = port;
-        this.dockerNetworkInterface = dockerNetworkInterface;
-
         this.configureLoggers();
 
         this.webApp = express();
@@ -89,19 +84,20 @@ export default class ContainerWorkspaces {
             DB_NAME,
         } = process.env;
 
+        this.mysqlConnection = this.connectToDatabase({
+            host: DB_HOST,
+            user: DB_USER,
+            password: DB_PASSWORD,
+            database: DB_NAME,
+        });
+
         this.ProxmoxClient = new ProxmoxConnection({
             hostname: PVE_HOSTNAME,
             protocol: PVE_PROTOCOL,
             username: PVE_USERNAME,
             password: PVE_PASSWORD,
             pveLogger: this.pveLogger,
-        });
-
-        this.mysqlConnection = this.connectToDatabase({
-            host: DB_HOST,
-            user: DB_USER,
-            password: DB_PASSWORD,
-            database: DB_NAME,
+            mysqlConnection: this.mysqlConnection,
         });
     }
 
@@ -172,5 +168,21 @@ export default class ContainerWorkspaces {
     private initRouters(): void {
         this.initMainRouter();
         this.initAgentRouter();
+    }
+
+    public addTask(task: Task): Task {
+        const sql: string = `INSERT INTO tasks (start_time, data) VALUES (?, ?)`;
+        this.mysqlConnection.query(sql, [
+            task.start_time,
+            JSON.stringify(task.data),
+        ]);
+
+        return task;
+    }
+
+    public async getTask(id: number): Promise<void> {
+        const sql: string = `SELECT * FROM tasks WHERE id = ?`;
+        const result = (await this.mysqlConnection.query(sql, id))[0][0];
+        const task = new Task(result);
     }
 }

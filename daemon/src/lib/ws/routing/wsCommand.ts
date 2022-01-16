@@ -15,5 +15,4 @@ export async function wsCommand(
         MessageRouting[messageData.action];
 
     if (handle) handle(this, req, messageData, socket);
-    else console.log(`Unknown action ${messageData.action}`);
 }

@@ -113,3 +113,7 @@ export function createLoggers(logsName: string[], logDir: string): Log4js {
 
     return log4js.configure(confObj);
 }
+
+export function generateID(): string {
+    return (Math.random() + 1).toString(36).substring(2);
+}

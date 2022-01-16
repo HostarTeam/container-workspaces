@@ -1,24 +1,25 @@
 import WebSocket from 'ws';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
-import { MessageData } from '../typing/MessageData';
+import { Task } from '../typing/Task';
 
-export function sendMessageToAgent(
+export function sendCommandToAgent(
     this: ContainerWorkspaces,
-    agentAddress: string,
-    messageData: MessageData
+    task: Task
 ): void {
     const clientList: WebSocket[] = Array.from(this.wss.clients);
 
     const selectedClient: WebSocket = clientList.find(
-        (client) => (client as any)._socket.remoteAddress
+        (client: any) => client._socket.remoteAddress === task.ipaddr
     );
 
     if (!selectedClient)
         throw new ClientNotFoundError(
-            `Could not find a client with address ${agentAddress}`
+            `Could not find a client with address ${task.ipaddr}`
         );
 
-    selectedClient.send(JSON.stringify(messageData));
+    selectedClient.send(JSON.stringify(task));
+
+    this.addTask(task);
 }
 
 export class ClientNotFoundError extends Error {

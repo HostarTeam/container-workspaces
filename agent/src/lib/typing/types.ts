@@ -1,3 +1,5 @@
+import MessageRouting from '../../ws/MessageRouting';
+
 export interface AgentConfiguration {
     apiServer: string;
     socketServer: string;
@@ -11,3 +13,5 @@ export interface CommandErrorReport {
     stack: string;
     message: string;
 }
+
+export type MessageRoutingHandler = MessageRouting[keyof MessageRouting];

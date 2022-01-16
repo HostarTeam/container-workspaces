@@ -1,8 +1,17 @@
 import { httpProtocol } from '../typing/types';
 import { getNodesName, printSuccess } from '../utils';
-import { call, getAuthKeys, getNodes } from './apiTools';
+import {
+    call,
+    createCTContainer,
+    createCTContainerInProxmox,
+    getAuthKeys,
+    getNodeByLocation,
+    getNodeIP,
+    getNodes,
+} from './apiTools';
 import { Node } from '../typing/types';
 import { Logger } from 'log4js';
+import ContainerWorkspaces from '../../ContainerWorkspaces';
 
 export default class ProxmoxConnection {
     protected hostname: string;
@@ -12,17 +21,21 @@ export default class ProxmoxConnection {
     protected port: number;
     protected basicURL: string;
     protected pveLogger: Logger;
+    protected mysqlConnection: any;
 
-    public authCookie: string = '';
+    protected authCookie: string = '';
     protected csrfPreventionToken: string = '';
     protected getAuthKeys: () => Promise<void> = getAuthKeys;
-    protected call: (
-        path: string,
-        method: string,
-        body?: string
-    ) => Promise<any> = call;
+    protected call: (path: string, method: string, body?: any) => Promise<any> =
+        call;
     public getNodes: () => Promise<Node[]> = getNodes;
     public getNodesName: () => Promise<string[]> = getNodesName;
+    public createCTContainer: () => Promise<void> = createCTContainer;
+    public getNodeIP: (node: string) => Promise<string> = getNodeIP;
+    public getNodeByLocation: (Location: string) => Promise<string> =
+        getNodeByLocation;
+    protected createCTContainerInProxmox: (options: any) => Promise<void> =
+        createCTContainerInProxmox;
 
     constructor({
         hostname,
@@ -31,6 +44,7 @@ export default class ProxmoxConnection {
         password,
         port = 8006,
         pveLogger,
+        mysqlConnection,
     }) {
         this.hostname = hostname;
         this.protocol = protocol;
@@ -38,8 +52,11 @@ export default class ProxmoxConnection {
         this.password = password;
         this.port = port;
         this.pveLogger = pveLogger;
+        this.mysqlConnection = mysqlConnection;
         this.intialize();
-        this.connect().then(() => {});
+        this.connect().then(async () => {
+            // await this.createCTContainer();
+        });
     }
 
     private intialize() {
@@ -50,6 +67,9 @@ export default class ProxmoxConnection {
 
     private async connect() {
         await this.getAuthKeys();
+        this.pveLogger.info(
+            `Connected successfully to ${this.protocol}://${this.hostname}:${this.port}/`
+        );
         printSuccess('Connect successfully!');
     }
 }

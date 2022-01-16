@@ -1,6 +1,6 @@
 import { generatePassword, printError, printSuccess } from './lib/utils';
 import passwd from 'passwd-linux';
-import { AgentConfiguration, CommandErrorReport } from './lib/types';
+import { AgentConfiguration, CommandErrorReport } from './lib/typing/types';
 import { execSync } from 'child_process';
 import { writeFileSync } from 'fs';
 import fetch, { Response } from 'node-fetch';
@@ -36,7 +36,7 @@ export default class InitAgent {
         await this.runInitCommands(initCommands, this.config.apiServer);
         this.logger.info('Executed init commands');
 
-        // await this.setAsRan();
+        await this.setAsRan();
     }
 
     private changePassword(newPassword: string): void {

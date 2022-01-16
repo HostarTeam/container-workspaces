@@ -1,17 +1,11 @@
 export class MessageData {
-    public taskid: string;
     public action: string;
     public method?: string;
     public args?: {
         [key: string]: any;
     };
 
-    constructor({ taskid, action, method, args }: MessageData) {
-        if (taskid) this.taskid = taskid;
-        else
-            throw new Error(
-                "Property 'taskid' is required and is missing from message"
-            );
+    constructor({ action, method, args }: MessageData) {
         if (action) this.action = action;
         else
             throw new InvalidMessageError(

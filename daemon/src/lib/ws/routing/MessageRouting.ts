@@ -10,12 +10,11 @@ export default class MessageRouting {
         messageData: MessageData,
         socket: WebSocket
     ) => Promise<void>;
-    public static async command_success(
+
+    public static async shell_exec(
         cw: ContainerWorkspaces,
         req: IncomingMessage,
         messageData: MessageData,
         socket: WebSocket
-    ): Promise<void> {
-        console.log(1);
-    }
+    ): Promise<void> {}
 }

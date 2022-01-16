@@ -2,7 +2,6 @@ import { IncomingMessage } from 'http';
 import WebSocket, { RawData } from 'ws';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { InvalidMessageError, MessageData } from '../typing/MessageData';
-import { printError } from '../utils';
 
 export function handleMessage(
     this: ContainerWorkspaces,

@@ -1,6 +1,6 @@
 import Agent from './Agent';
 import InitAgent from './InitAgent';
-import { AgentConfiguration } from './lib/types';
+import { AgentConfiguration } from './lib/typing/types';
 import {
     checkIfInitHadRan,
     printError,
