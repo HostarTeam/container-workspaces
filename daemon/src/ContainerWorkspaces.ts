@@ -180,9 +180,32 @@ export default class ContainerWorkspaces {
         return task;
     }
 
-    public async getTask(id: number): Promise<void> {
+    public async getTask(id: Task['id']): Promise<Task> {
         const sql: string = `SELECT * FROM tasks WHERE id = ?`;
         const result = (await this.mysqlConnection.query(sql, id))[0][0];
         const task = new Task(result);
+        return task;
+    }
+
+    public async updateTask(task: Task): Promise<Task> {
+        const sql: string = `UPDATE tasks SET start_time = ?, end_time = ?, data = ?, status = ?, error = ?, ipaddr = ? WHERE id = ?`;
+        await this.mysqlConnection.query(sql, [
+            task.start_time,
+            task.end_time,
+            JSON.stringify(task.data),
+            task.status,
+            task.error,
+            task.ipaddr,
+        ]);
+
+        return task;
+    }
+
+    public async errorTask(taskid: Task['id'], error: Error): Promise<void> {
+        const erroredTask = new Task(await this.getTask(taskid));
+        erroredTask.status = 'error';
+        erroredTask.error = error.message;
+
+        await this.updateTask(erroredTask);
     }
 }
