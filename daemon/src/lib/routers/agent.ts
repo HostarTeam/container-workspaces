@@ -20,7 +20,7 @@ export function initAgentRouter(this: ContainerWorkspaces): void {
                 status: 'error',
                 message: "password isn't specified in body",
             });
-        res.send({ status: 'success' });
+        res.send({ status: 'ok' });
     });
 
     router.get('/initcommands', async (req: Request, res: Response) => {
@@ -53,10 +53,10 @@ export function initAgentRouter(this: ContainerWorkspaces): void {
                 .status(400)
                 .send({ message: 'exitCode not specified', status: 'error' });
 
-        res.send({ status: 'success', message: 'report received' });
+        res.send({ status: 'ok', message: 'report received' });
     });
 
-    router.post('/command/initsuccess', (req: Request, res: Response) => {
-        res.send({ status: 'success', message: 'report received' });
+    router.post('/command/initok', (req: Request, res: Response) => {
+        res.send({ status: 'ok', message: 'report received' });
     });
 }

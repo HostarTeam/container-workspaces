@@ -1,20 +1,14 @@
 import { execSync } from 'child_process';
 import Agent from '../Agent';
-import { DaemonToClientCommand } from '../lib/typing/DaemonToClientCommand';
 import { CommandErrorReport } from '../lib/typing/types';
 import { MessageData } from '../lib/typing/MessageData';
+import { Task } from '../lib/typing/Task';
 
 export default class MessageRouting {
-    [key: string]: (
-        agent: Agent,
-        messageData: DaemonToClientCommand
-    ) => Promise<void>;
+    [key: string]: (agent: Agent, task: Task) => Promise<void>;
 
-    public static async shell_exec(
-        agent: Agent,
-        messageData: DaemonToClientCommand
-    ): Promise<void> {
-        const commands: string = messageData.args.commands;
+    public static async shell_exec(agent: Agent, task: Task): Promise<void> {
+        const commands: string = task.data.args.commands;
         for (const command of commands) {
             try {
                 await execSync(command, {
@@ -23,12 +17,13 @@ export default class MessageRouting {
 
                 agent.logger.info(`Executed command ${command}`);
 
-                const commandSuccess: MessageData = {
+                const commandSuccess: MessageData = new MessageData({
+                    taskid: task.id,
                     action: 'shell_exec',
                     args: {
                         status: 'success',
                     },
-                };
+                });
 
                 agent.ws.send(JSON.stringify(commandSuccess));
             } catch (err: any) {
@@ -48,6 +43,7 @@ export default class MessageRouting {
                 );
 
                 const clientCommand: MessageData = new MessageData({
+                    taskid: task.id,
                     action: 'shell_exec',
                     args: { status: 'error', errorReport },
                 });

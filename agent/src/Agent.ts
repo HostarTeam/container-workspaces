@@ -3,15 +3,14 @@ import { RawData, WebSocket } from 'ws';
 import { printSuccess } from './lib/utils';
 import log4js, { Logger } from 'log4js';
 import { handleMessage } from './ws/handleMessage';
-import { DaemonToClientCommand } from './lib/typing/DaemonToClientCommand';
 import { wsCommand } from './ws/wsCommand';
+import { Task } from './lib/typing/Task';
 
 export default class Agent {
     public ws: WebSocket;
     public logger: Logger;
     protected handleMessage: (message: RawData) => void = handleMessage;
-    protected wsCommand: (commandData: DaemonToClientCommand) => void =
-        wsCommand;
+    protected wsCommand: (commandData: Task) => void = wsCommand;
 
     constructor(public config: AgentConfiguration) {
         this.configureLogger();

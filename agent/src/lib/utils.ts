@@ -1,7 +1,5 @@
 import { readFileSync } from 'fs';
-import Agent from '../Agent';
-import InitAgent from '../InitAgent';
-import { AgentConfiguration, CommandErrorReport } from './typing/types';
+import { AgentConfiguration } from './typing/types';
 
 export function generatePassword(length: number): string {
     var result: string = '';

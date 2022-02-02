@@ -7,6 +7,7 @@ import {
     LXC,
     NetowrkInteface,
     Node,
+    SQLNode,
 } from '../typing/types';
 
 export function call(
@@ -139,12 +140,42 @@ export async function getNodeIP(
     return data.find((x) => x.name == node).ip;
 }
 
+export async function checkIfNodeIsFine(
+    this: ProxmoxConnection,
+    nodename: string
+): Promise<boolean> {
+    const nodes: Node[] = await this.getNodes();
+    let node: Node = nodes.find((x) => x.node == nodename);
+    if (node) {
+        if (node.type !== 'node') return false;
+        if (node.status == 'offline' || node.status == 'unknown') return false;
+        if (node.cpu * 100 > 90) return false;
+        if ((node.mem / node.maxmem) * 100 > 90) return false;
+        if ((node.disk / node.maxdisk) * 100 > 90) return false;
+        return true;
+    }
+    return false;
+}
+
+export async function getFirstFineNode(
+    this: ProxmoxConnection,
+    nodes: SQLNode[]
+) {
+    for (let node of nodes) {
+        if (await this.checkIfNodeIsFine(node.hostname)) return node.hostname;
+    }
+
+    return null;
+}
+
 export async function getNodeByLocation(
     this: ProxmoxConnection,
     location: string
 ): Promise<string> {
-    const nodes = await this.getNodes();
-    const ips = nodes.map((x) => this.getNodeIP(x.node));
+    const query = 'SELECT * FROM nodes WHERE location = ?';
+    const [nodes]: SQLNode[][] = await this.mysqlConnection.query(query, [
+        location,
+    ]);
 
-    return '';
+    return await this.getFirstFineNode(nodes);
 }

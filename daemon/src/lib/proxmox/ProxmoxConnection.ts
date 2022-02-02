@@ -8,10 +8,13 @@ import {
     getNodeByLocation,
     getNodeIP,
     getNodes,
+    getFirstFineNode,
+    checkIfNodeIsFine,
 } from './apiTools';
 import { Node } from '../typing/types';
 import { Logger } from 'log4js';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
+import { SQLNode } from '../typing/types';
 
 export default class ProxmoxConnection {
     protected hostname: string;
@@ -36,6 +39,10 @@ export default class ProxmoxConnection {
         getNodeByLocation;
     protected createCTContainerInProxmox: (options: any) => Promise<void> =
         createCTContainerInProxmox;
+    protected getFirstFineNode: (nodes: SQLNode[]) => Promise<string> =
+        getFirstFineNode;
+    protected checkIfNodeIsFine: (nodename: string) => Promise<boolean> =
+        checkIfNodeIsFine;
 
     constructor({
         hostname,
@@ -54,9 +61,7 @@ export default class ProxmoxConnection {
         this.pveLogger = pveLogger;
         this.mysqlConnection = mysqlConnection;
         this.intialize();
-        this.connect().then(async () => {
-            // await this.createCTContainer();
-        });
+        this.connect().then(async () => {});
     }
 
     private intialize() {

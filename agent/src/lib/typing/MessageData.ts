@@ -1,4 +1,5 @@
 export class MessageData {
+    public taskid: string;
     public action: string;
     public method?: string;
     public args?: {

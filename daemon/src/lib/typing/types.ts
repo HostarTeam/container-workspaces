@@ -16,8 +16,11 @@ export interface Node {
     maxcpu: number;
     maxmem: number;
     mem: number;
+    disk: number;
+    maxdisk: number;
     ssl_fingerprint: string;
     uptime: number;
+    type: string;
 }
 
 export interface CommandError {
@@ -133,4 +136,12 @@ export interface CTOptions {
     ct_disk: number;
     ct_ram: number;
     ct_swap: number;
+}
+
+export interface SQLNode {
+    id: number;
+    hostname: string;
+    is_main: 1 | 0;
+    ip: string;
+    location: string;
 }
