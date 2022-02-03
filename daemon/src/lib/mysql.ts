@@ -1,11 +1,14 @@
 import mysql, { Connection } from 'mysql2';
 import { ConnectionOptions } from 'mysql2/typings/mysql';
+import { Connection as PromiseConnection } from 'mysql2/promise';
 import { printSuccess } from './utils';
 
 // Database connection
-export function connectToDatabase(connectionOptions: ConnectionOptions): any {
+export function connectToDatabase(
+    connectionOptions: ConnectionOptions
+): PromiseConnection {
     const connection: Connection = mysql.createConnection(connectionOptions);
-    connection.connect(function (err: Error) {
+    connection.connect((err) => {
         if (err) throw err;
         printSuccess(
             `Connected to database at ${connectionOptions.host}:${

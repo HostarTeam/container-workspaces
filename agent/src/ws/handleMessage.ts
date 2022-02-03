@@ -8,7 +8,11 @@ export function handleMessage(this: Agent, message: RawData): void {
         const commandJSON = JSON.parse(message.toString());
         const commandData = new Task(commandJSON);
         const data: MessageData = new MessageData(commandData.data);
-        this.logger.info(`${commandData.id} - ${data.action} - ${data.method}`);
+        this.logger.info(
+            `${commandData.id} - ${data.action}${
+                data.method && ` - ${data.method}`
+            }`
+        );
         this.wsCommand(commandData);
     } catch (err: unknown) {
         if (err instanceof SyntaxError) {

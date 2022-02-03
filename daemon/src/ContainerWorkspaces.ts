@@ -25,6 +25,7 @@ import { MessageData } from './lib/typing/MessageData';
 import { wsCommand } from './lib/ws/routing/wsCommand';
 import { sendCommandToAgent } from './lib/ws/commandAgent';
 import { Task } from './lib/typing/Task';
+import { Connection } from 'mysql2/promise';
 
 export default class ContainerWorkspaces {
     private httpServer: Server;
@@ -40,8 +41,9 @@ export default class ContainerWorkspaces {
 
     protected initMainRouter: () => void = initMainRouter;
     protected initAgentRouter: () => void = initAgentRouter;
-    private connectToDatabase: (connectionOptions: ConnectionOptions) => any =
-        connectToDatabase;
+    private connectToDatabase: (
+        connectionOptions: ConnectionOptions
+    ) => Connection = connectToDatabase;
     protected handleMessage: (
         message: RawData,
         req: IncomingMessage,
@@ -61,7 +63,7 @@ export default class ContainerWorkspaces {
     protected agentRouter: Router;
     protected webSockerRouter;
     protected ProxmoxClient: ProxmoxConnection;
-    public mysqlConnection: any;
+    public mysqlConnection: Connection;
 
     constructor({ apiKey, address, port }) {
         this.apiKey = apiKey;
@@ -170,19 +172,21 @@ export default class ContainerWorkspaces {
         this.initAgentRouter();
     }
 
-    public addTask(task: Task): Task {
-        const sql: string = `INSERT INTO tasks (start_time, data) VALUES (?, ?)`;
-        this.mysqlConnection.query(sql, [
-            task.start_time,
+    public async addTask(task: Task): Promise<Task> {
+        const sql: string = `INSERT INTO tasks (start_time, data, ipaddr) VALUES (?, ?, ?)`;
+        await this.mysqlConnection.query(sql, [
+            task.start_time.getTime(),
             JSON.stringify(task.data),
+            task.ipaddr,
         ]);
 
         return task;
     }
 
-    public async getTask(id: Task['id']): Promise<Task> {
+    public async getTask(id: Task['id']): Promise<Task | null> {
         const sql: string = `SELECT * FROM tasks WHERE id = ?`;
-        const result = (await this.mysqlConnection.query(sql, id))[0][0];
+        const result = (await this.mysqlConnection.query(sql, [id]))[0][0];
+        if (!result) return null;
         const task = new Task(result);
         return task;
     }
@@ -190,8 +194,8 @@ export default class ContainerWorkspaces {
     public async updateTask(task: Task): Promise<Task> {
         const sql: string = `UPDATE tasks SET start_time = ?, end_time = ?, data = ?, status = ?, error = ?, ipaddr = ? WHERE id = ?`;
         await this.mysqlConnection.query(sql, [
-            task.start_time,
-            task.end_time,
+            task.start_time.getTime(),
+            task.end_time.getTime(),
             JSON.stringify(task.data),
             task.status,
             task.error,

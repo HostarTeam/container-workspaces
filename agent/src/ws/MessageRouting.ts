@@ -1,7 +1,7 @@
 import { execSync } from 'child_process';
 import Agent from '../Agent';
 import { CommandErrorReport } from '../lib/typing/types';
-import { MessageData } from '../lib/typing/MessageData';
+import { MessageDataResponse } from '../lib/typing/MessageData';
 import { Task } from '../lib/typing/Task';
 
 export default class MessageRouting {
@@ -17,13 +17,14 @@ export default class MessageRouting {
 
                 agent.logger.info(`Executed command ${command}`);
 
-                const commandSuccess: MessageData = new MessageData({
-                    taskid: task.id,
-                    action: 'shell_exec',
-                    args: {
-                        status: 'success',
-                    },
-                });
+                const commandSuccess: MessageDataResponse =
+                    new MessageDataResponse({
+                        taskid: task.id,
+                        action: 'shell_exec',
+                        args: {
+                            status: 'success',
+                        },
+                    });
 
                 agent.ws.send(JSON.stringify(commandSuccess));
             } catch (err: any) {
@@ -42,11 +43,12 @@ export default class MessageRouting {
                     )}`
                 );
 
-                const clientCommand: MessageData = new MessageData({
-                    taskid: task.id,
-                    action: 'shell_exec',
-                    args: { status: 'error', errorReport },
-                });
+                const clientCommand: MessageDataResponse =
+                    new MessageDataResponse({
+                        taskid: task.id,
+                        action: 'shell_exec',
+                        args: { status: 'error', errorReport },
+                    });
 
                 agent.ws.send(JSON.stringify(clientCommand));
             }

@@ -1,11 +1,11 @@
-import { MessageData } from '../typing/MessageData';
+import { MessageDataResponse } from '../typing/MessageData';
 
 export class Task {
     public id: string;
     public ipaddr: string;
     public start_time: Date;
     public end_time?: Date | null;
-    public data: MessageData | null;
+    public data: MessageDataResponse | null;
     public status?: 'OK' | 'error' | null; // Defaults to null
     public error?: string | null;
 
@@ -27,7 +27,8 @@ export class Task {
         if (typeof end_time === 'number') end_time = new Date(end_time);
         this.end_time = end_time;
 
-        if (typeof data === 'string') data = new MessageData(JSON.parse(data));
+        if (typeof data === 'string')
+            data = new MessageDataResponse(JSON.parse(data));
         this.data = data;
 
         this.status = status;
