@@ -1,5 +1,3 @@
-import { generatePassword, printError, printSuccess } from './lib/utils';
-import passwd from 'passwd-linux';
 import { AgentConfiguration, CommandErrorReport } from './lib/typing/types';
 import { execSync } from 'child_process';
 import { writeFileSync } from 'fs';
@@ -9,25 +7,12 @@ import log4js, { Logger } from 'log4js';
 export default class InitAgent {
     protected logger: Logger;
 
-    constructor(
-        protected config: AgentConfiguration,
-        private developmentMode = true
-    ) {
+    constructor(protected config: AgentConfiguration) {
         this.configureLogger();
         this.logger.info('Running init agent');
     }
 
     public async runInit(): Promise<void> {
-        const generatedPassword: string = generatePassword(32);
-        this.logger.info('Generated password successfully');
-        if (!this.developmentMode) this.changePassword(generatedPassword);
-        else console.log('development mode, not changing password');
-
-        await this.postCTDetails({
-            password: generatedPassword,
-            apiServer: this.config.apiServer,
-        });
-
         const initCommands: string[] = await this.getInitCommands(
             this.config.apiServer
         );
@@ -37,36 +22,6 @@ export default class InitAgent {
         this.logger.info('Executed init commands');
 
         await this.setAsRan();
-    }
-
-    private changePassword(newPassword: string): void {
-        passwd.changePassword(
-            'root',
-            newPassword,
-            (err: unknown, response): void => {
-                if (err)
-                    this.logger.error(`Error changing password: ${<Error>err}`);
-                else if (response) this.logger.info('Password changed');
-                else this.logger.error('Could not change password');
-            }
-        );
-    }
-
-    private async postCTDetails({ password, apiServer }): Promise<void> {
-        try {
-            await fetch(`${apiServer}/api/agent/newct`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'Application/JSON',
-                },
-                body: JSON.stringify({
-                    password,
-                }),
-            });
-            printSuccess('Sent CT details successfully');
-        } catch (err: unknown) {
-            this.logger.error(<Error>err);
-        }
     }
 
     private async getInitCommands(apiServer: string): Promise<string[]> {
