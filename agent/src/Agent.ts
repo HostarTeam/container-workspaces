@@ -9,6 +9,8 @@ import { Task } from './lib/typing/Task';
 export default class Agent {
     public ws: WebSocket;
     public logger: Logger;
+    public logFilePath: string;
+    private reconnectInterval: NodeJS.Timeout;
     protected handleMessage: (message: RawData) => void = handleMessage;
     protected wsCommand: (commandData: Task) => void = wsCommand;
 
@@ -36,12 +38,23 @@ export default class Agent {
             this.logger.warn(
                 `WebSocket was disconnected from ${this.config.socketServer}`
             );
-            setTimeout(() => this.initWebSocket(true), 10000); // Wait 10 seconds before reconnecting
+            this.reconnectToWS();
         });
 
         this.ws.on('error', (err) => {
+            if (err.message.includes('connect ECONNREFUSED')) {
+                this.reconnectToWS();
+            }
             this.logger.error(err.message);
         });
+    }
+
+    private reconnectToWS(): void {
+        clearTimeout(this.reconnectInterval);
+        this.reconnectInterval = setTimeout(
+            () => this.initWebSocket(true),
+            10000
+        ); // Wait 10 seconds before reconnecting
     }
 
     private configureLogger(location: string = '/var/log/cw/agent.log'): void {
@@ -56,5 +69,6 @@ export default class Agent {
                 categories: { default: { appenders: ['agent'], level: 'all' } },
             })
             .getLogger();
+        this.logFilePath = location;
     }
 }

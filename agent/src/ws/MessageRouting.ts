@@ -3,6 +3,7 @@ import Agent from '../Agent';
 import { CommandErrorReport } from '../lib/typing/types';
 import { MessageDataResponse } from '../lib/typing/MessageData';
 import { Task } from '../lib/typing/Task';
+import { read } from 'read-last-lines';
 
 export default class MessageRouting {
     [key: string]: (agent: Agent, task: Task) => Promise<void>;
@@ -52,6 +53,35 @@ export default class MessageRouting {
 
                 agent.ws.send(JSON.stringify(clientCommand));
             }
+        }
+    }
+
+    public static async send_logs(agent: Agent, task: Task): Promise<void> {
+        try {
+            const lines = await read(
+                agent.logFilePath,
+                task.data.args.linesCount
+            );
+
+            const clientCommand: MessageDataResponse = new MessageDataResponse({
+                taskid: task.id,
+                action: 'send_logs',
+                args: { status: 'success', lines },
+            });
+
+            agent.ws.send(JSON.stringify(clientCommand));
+        } catch (err) {
+            agent.logger.error(
+                `Failed to read ${task.data.args.linesCount} lines of log file`
+            );
+
+            const clientCommand: MessageDataResponse = new MessageDataResponse({
+                taskid: task.id,
+                action: 'send_logs',
+                args: { status: 'error', lines: null },
+            });
+
+            agent.ws.send(JSON.stringify(clientCommand));
         }
     }
 }

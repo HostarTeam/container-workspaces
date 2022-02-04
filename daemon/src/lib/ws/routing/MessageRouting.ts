@@ -1,7 +1,7 @@
 import { IncomingMessage } from 'http';
 import WebSocket from 'ws';
 import ContainerWorkspaces from '../../../ContainerWorkspaces';
-import { MessageData } from '../../typing/MessageData';
+import { MessageData, MessageDataResponse } from '../../typing/MessageData';
 import { Task } from '../../typing/Task';
 
 export default class MessageRouting {
@@ -10,23 +10,49 @@ export default class MessageRouting {
     public static async shell_exec(
         cw: ContainerWorkspaces,
         req: IncomingMessage,
-        messageData: MessageData,
+        messageData: MessageDataResponse,
         socket: WebSocket
     ): Promise<void> {
-        [cw, req, messageData, socket];
+        const task: Task = await cw.getTask(messageData.taskid);
+        if (!task) return;
         if (
             messageData.args?.status === 'error' &&
             messageData.args?.errorReport
         ) {
-            const task: Task = await cw.getTask(messageData.args.taskid);
-            console.log('d');
-            if (!task) return;
-
+            cw.errorTask(task.id, <Error>messageData.args.errorReport);
             cw.wsLogger.error(
-                `Error in agent with address ${task.ipaddr} in task ${task.id} - ${messageData.args.errorReport.message}`
+                `Error in agent with id ${task.containerID} in task ${task.id} - ${messageData.args.errorReport.message}`
             );
-            console.log('e');
         } else {
+            // cw.updateTask(messageData);
+            cw.wsLogger.info(
+                `Succeded agent with id ${task.containerID} in task ${task.id} - ${messageData.args.status}`
+            );
+        }
+    }
+
+    public static async send_logs(
+        cw: ContainerWorkspaces,
+        req: IncomingMessage,
+        messageData: MessageDataResponse,
+        socket: WebSocket
+    ): Promise<void> {
+        const task: Task = await cw.getTask(messageData.taskid);
+        if (!task) return;
+        if (
+            messageData.args?.status === 'error' &&
+            messageData.args?.errorReport
+        ) {
+            cw.errorTask(task.id, <Error>messageData.args.errorReport);
+            cw.wsLogger.error(
+                `Error in agent with id ${task.containerID} in task ${task.id} - ${messageData.args.errorReport.message}`
+            );
+        } else {
+            cw.loglines.set(task.id, messageData.args.lines);
+            // cw.updateTask(messageData);
+            cw.wsLogger.info(
+                `Succeded agent with id ${task.containerID} in task ${task.id} - ${messageData.args.status}`
+            );
         }
     }
 }

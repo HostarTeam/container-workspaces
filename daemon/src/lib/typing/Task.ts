@@ -3,7 +3,7 @@ import { MessageData } from '../typing/MessageData';
 
 export class Task {
     public id: string;
-    public ipaddr: string;
+    public containerID: number;
     public start_time: Date;
     public end_time?: Date | null;
     public data: MessageData | null;
@@ -12,7 +12,7 @@ export class Task {
 
     constructor({
         id = generateID(),
-        ipaddr,
+        containerID,
         start_time = new Date(),
         end_time = null,
         data,
@@ -20,7 +20,7 @@ export class Task {
         error = null,
     }: TaskOptions) {
         this.id = id;
-        this.ipaddr = ipaddr;
+        this.containerID = containerID;
 
         if (typeof start_time === 'number') start_time = new Date(start_time);
         this.start_time = start_time;
@@ -28,7 +28,7 @@ export class Task {
         if (typeof end_time === 'number') end_time = new Date(end_time);
         this.end_time = end_time;
 
-        if (typeof data === 'string') data = new MessageData(JSON.parse(data));
+        // if (typeof data === 'string') data = new MessageData(JSON.parse(data));
         this.data = data;
 
         this.status = status;
@@ -38,7 +38,7 @@ export class Task {
 
 interface TaskOptions {
     id?: string;
-    ipaddr: string;
+    containerID: number;
     start_time?: Date | number;
     end_time?: Date | number;
     data: any | string;

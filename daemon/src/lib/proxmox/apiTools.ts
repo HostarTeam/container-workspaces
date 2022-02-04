@@ -1,13 +1,14 @@
 import fetch, { Response } from 'node-fetch';
 import ProxmoxConnection from './ProxmoxConnection';
-import { getNodesName, printError } from '../utils';
+import { printError } from '../utils';
 import {
     ClusterNode,
+    ContainerStatus,
     CTOptions,
     LXC,
-    NetowrkInteface,
     Node,
     SQLNode,
+    status,
 } from '../typing/types';
 
 export function call(
@@ -86,7 +87,9 @@ export async function createCTContainer(
     this: ProxmoxConnection
 ): Promise<void> {
     const sql = `SELECT * FROM config`;
-    const config = (await this.mysqlConnection.query(sql))[0][0]['config'];
+    const config = JSON.parse(
+        (await this.mysqlConnection.query(sql))[0][0]['config']
+    );
     const ctOptions = config['ct_options'];
     await this.createCTContainerInProxmox(ctOptions);
 }
@@ -162,7 +165,7 @@ export async function getFirstFineNode(
     nodes: SQLNode[]
 ) {
     for (let node of nodes) {
-        if (await this.checkIfNodeIsFine(node.hostname)) return node.hostname;
+        if (await this.checkIfNodeIsFine(node.nodename)) return node.nodename;
     }
 
     return null;
@@ -178,4 +181,89 @@ export async function getNodeByLocation(
     ]);
 
     return await this.getFirstFineNode(nodes);
+}
+
+export async function checkIfCotainerIDExists(
+    this: ProxmoxConnection,
+    id: number
+): Promise<boolean> {
+    // using proxmox api
+    const nodes = await this.getNodes();
+    for (const node of nodes) {
+        const res = await this.call(`/nodes/${node.node}/lxc/${id}`, 'GET');
+
+        if (res) return true;
+    }
+    return false;
+}
+
+export async function getContainerIP(
+    this: ProxmoxConnection,
+    id: number
+): Promise<string> {
+    if (!(await this.checkIfCotainerIDExists(id))) return null;
+    const nodes = await this.getNodes();
+    for (const node of nodes) {
+        let ctConfig = await this.call(
+            `nodes/${node.node}/lxc/${id}/config`,
+            'GET'
+        );
+        if (!ctConfig.data) continue;
+        // net config for example "net0": "name=eth0,bridge=vmbr0,firewall=1,gw=195.133.95.1,hwaddr=2E:EA:FA:B4:21:47,ip=195.133.95.121/24,type=veth"
+        const netConf = ctConfig.data.net0;
+        return netConf.split('ip=')[1].split('/')[0];
+    }
+
+    return null;
+}
+
+export async function getContainerInfo(
+    this: ProxmoxConnection,
+    id: number
+): Promise<LXC> {
+    const nodes: Node[] = await this.getNodes();
+    for (const node of nodes) {
+        let ctConfig = await this.call(
+            `nodes/${node.node}/lxc/${id}/config`,
+            'GET'
+        );
+        if (!ctConfig.data) continue;
+        const containerData: LXC = ctConfig.data;
+        return containerData;
+    }
+    return null;
+}
+
+export async function getContainerStatus(
+    this: ProxmoxConnection,
+    id: number
+): Promise<ContainerStatus> {
+    const nodes: Node[] = await this.getNodes();
+    for (const node of nodes) {
+        let ctConfig = await this.call(
+            `nodes/${node.node}/lxc/${id}/status`,
+            'GET'
+        );
+        if (!ctConfig.data) continue;
+        const containerData: ContainerStatus = ctConfig.data;
+        return containerData;
+    }
+    return null;
+}
+
+export async function changeContainerStatus(
+    this: ProxmoxConnection,
+    cotainerID: number,
+    status: status
+): Promise<string | null> {
+    const nodes: Node[] = await this.getNodes();
+    for (const node of nodes) {
+        let ctConfig = await this.call(
+            `nodes/${node.node}/lxc/${cotainerID}/status/${status}`,
+            'POST'
+        );
+        if (!ctConfig.data) continue;
+        return ctConfig.data;
+    }
+    return null;
 }

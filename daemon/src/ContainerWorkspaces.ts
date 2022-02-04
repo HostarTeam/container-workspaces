@@ -6,7 +6,7 @@ import express, {
     Response,
     Handler,
 } from 'express';
-import { createServer, IncomingMessage, Server } from 'http';
+import { createServer, Server } from 'http';
 import { Log4js, Logger } from 'log4js';
 import { initMainRouter } from './lib/routers/main';
 import { initAgentRouter } from './lib/routers/agent';
@@ -14,18 +14,19 @@ import {
     checkIP,
     createLoggers,
     printSuccess,
+    sleep,
     validateAuth,
 } from './lib/utils';
 import ProxmoxConnection from './lib/proxmox/ProxmoxConnection';
-import WebSocket, { RawData, WebSocketServer } from 'ws';
+import { WebSocketServer } from 'ws';
 import { connectToDatabase } from './lib/mysql';
-import { ConnectionOptions } from 'mysql2/typings/mysql';
 import { handleMessage } from './lib/ws/wsMessageHandler';
-import { MessageData } from './lib/typing/MessageData';
 import { wsCommand } from './lib/ws/routing/wsCommand';
-import { sendCommandToAgent } from './lib/ws/commandAgent';
+import { sendTaskToAgent } from './lib/ws/commandAgent';
 import { Task } from './lib/typing/Task';
 import { Connection } from 'mysql2/promise';
+import { status } from './lib/typing/types';
+import { MessageData } from './lib/typing/MessageData';
 
 export default class ContainerWorkspaces {
     private httpServer: Server;
@@ -38,31 +39,22 @@ export default class ContainerWorkspaces {
     public httpLogger: Logger;
     public wsLogger: Logger;
     public pveLogger: Logger;
+    public loglines: Map<Task['id'], string> = new Map();
 
-    protected initMainRouter: () => void = initMainRouter;
-    protected initAgentRouter: () => void = initAgentRouter;
-    private connectToDatabase: (
-        connectionOptions: ConnectionOptions
-    ) => Connection = connectToDatabase;
-    protected handleMessage: (
-        message: RawData,
-        req: IncomingMessage,
-        socket: WebSocket
-    ) => void = handleMessage;
-    protected wsCommand: (
-        req: IncomingMessage,
-        messageData: MessageData,
-        socket: WebSocket
-    ) => Promise<void> = wsCommand;
-    protected checkIP: (ip: string) => Promise<boolean> = checkIP;
-    protected sendCommandToAgent: (task: Task) => void = sendCommandToAgent;
+    protected initMainRouter = initMainRouter;
+    protected initAgentRouter = initAgentRouter;
+    private connectToDatabase = connectToDatabase;
+    protected handleMessage = handleMessage;
+    protected wsCommand = wsCommand;
+    protected checkIP = checkIP;
+    protected sendTaskToAgent = sendTaskToAgent;
 
     protected webApp: Application;
     protected wss: WebSocketServer;
     protected mainRouter: Router;
     protected agentRouter: Router;
     protected webSockerRouter;
-    protected ProxmoxClient: ProxmoxConnection;
+    protected proxmoxClient: ProxmoxConnection;
     public mysqlConnection: Connection;
 
     constructor({ apiKey, address, port }) {
@@ -93,7 +85,7 @@ export default class ContainerWorkspaces {
             database: DB_NAME,
         });
 
-        this.ProxmoxClient = new ProxmoxConnection({
+        this.proxmoxClient = new ProxmoxConnection({
             hostname: PVE_HOSTNAME,
             protocol: PVE_PROTOCOL,
             username: PVE_USERNAME,
@@ -173,16 +165,16 @@ export default class ContainerWorkspaces {
     }
 
     public async addTask(task: Task): Promise<Task> {
-        const sql: string = `INSERT INTO tasks (start_time, data, ipaddr) VALUES (?, ?, ?)`;
+        const sql: string = `INSERT INTO tasks (id, start_time, data, containerID) VALUES (?, ?, ?, ?)`;
         await this.mysqlConnection.query(sql, [
+            task.id,
             task.start_time.getTime(),
             JSON.stringify(task.data),
-            task.ipaddr,
+            task.containerID,
         ]);
 
         return task;
     }
-
     public async getTask(id: Task['id']): Promise<Task | null> {
         const sql: string = `SELECT * FROM tasks WHERE id = ?`;
         const result = (await this.mysqlConnection.query(sql, [id]))[0][0];
@@ -192,14 +184,14 @@ export default class ContainerWorkspaces {
     }
 
     public async updateTask(task: Task): Promise<Task> {
-        const sql: string = `UPDATE tasks SET start_time = ?, end_time = ?, data = ?, status = ?, error = ?, ipaddr = ? WHERE id = ?`;
+        const sql: string = `UPDATE tasks SET start_time = ?, end_time = ?, data = ?, status = ?, error = ?, containerID = ? WHERE id = ?`;
         await this.mysqlConnection.query(sql, [
             task.start_time.getTime(),
             task.end_time.getTime(),
             JSON.stringify(task.data),
             task.status,
             task.error,
-            task.ipaddr,
+            task.containerID,
         ]);
 
         return task;
@@ -211,5 +203,43 @@ export default class ContainerWorkspaces {
         erroredTask.error = error.message;
 
         await this.updateTask(erroredTask);
+    }
+
+    public async triggerStatusChange(
+        req: Request,
+        res: Response,
+        status: status
+    ): Promise<void> {
+        const containerID: number = Number(req.params.containerID);
+        const statusRes = await this.proxmoxClient.changeContainerStatus(
+            containerID,
+            status
+        );
+        if (!statusRes)
+            res.status(409).send({
+                status: 'error',
+                message: `could not ${status} container`,
+            });
+        else res.send({ status: 'ok' });
+    }
+
+    protected async getLogs(containerID: number, ip: string): Promise<string> {
+        const data: MessageData = {
+            action: 'send_logs',
+            args: {
+                linesCount: 100,
+            },
+        };
+        const task: Task = new Task({ data, containerID });
+        await this.sendTaskToAgent(task, ip);
+
+        // God please forgive us for this sin we're about to commit
+        for (let i = 0; i < 8; i++) {
+            await sleep(300);
+            const lines = this.loglines.get(task.id);
+            if (lines) return lines;
+        }
+
+        return null;
     }
 }

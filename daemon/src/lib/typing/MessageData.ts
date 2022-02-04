@@ -1,17 +1,11 @@
 export class MessageData {
-    public taskid: string;
     public action: string;
     public method?: string;
     public args?: {
         [key: string]: any;
     };
 
-    constructor({ taskid, action, method, args }: MessageData) {
-        if (taskid) this.taskid = taskid;
-        else
-            throw new Error(
-                "Property 'taskid' is required and is missing from message"
-            );
+    constructor({ action, method, args }: MessageDataResponse) {
         if (action) this.action = action;
         else
             throw new InvalidMessageError(
@@ -21,6 +15,19 @@ export class MessageData {
         else this.method = '';
         if (args) this.args = args;
         else this.args = {};
+    }
+}
+
+export class MessageDataResponse extends MessageData {
+    public taskid: string;
+
+    constructor(props: MessageDataResponse) {
+        super(props);
+        if (props.taskid) this.taskid = props.taskid;
+        else
+            throw new InvalidMessageError(
+                "Proroperty 'taskid' is missing from message"
+            );
     }
 }
 

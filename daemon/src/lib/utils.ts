@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { Configuration } from './typing/types';
+import { Configuration, CT } from './typing/types';
 import { Handler, NextFunction, Request, Response } from 'express';
 import ProxmoxConnection from './proxmox/ProxmoxConnection';
 import ContainerWorkspaces from '../ContainerWorkspaces';
@@ -86,8 +86,8 @@ export async function checkIP(
     ip: string
 ): Promise<boolean> {
     const sql = 'SELECT ipv4 from cts';
-    let [ips]: Array<any[]> = await this.mysqlConnection.query(sql);
-    ips = ips.map((x) => x['ipv4']);
+    const [cts]: Array<CT[]> = (await this.mysqlConnection.query(sql)) as any;
+    let ips: string[] = cts.map((x) => x['ipv4']);
 
     return ips.includes(ip);
 }
@@ -115,5 +115,12 @@ export function createLoggers(logsName: string[], logDir: string): Log4js {
 }
 
 export function generateID(): string {
-    return (Math.random() + 1).toString(36).substring(2);
+    return (
+        (Math.random() + 1).toString(36).substring(2) +
+        (Math.random() + 1).toString(36).substring(2)
+    );
+}
+
+export function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }

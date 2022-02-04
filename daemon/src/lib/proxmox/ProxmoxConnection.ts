@@ -10,11 +10,13 @@ import {
     getNodes,
     getFirstFineNode,
     checkIfNodeIsFine,
+    getContainerIP,
+    checkIfCotainerIDExists,
+    getContainerInfo,
+    getContainerStatus,
+    changeContainerStatus,
 } from './apiTools';
-import { Node } from '../typing/types';
 import { Logger } from 'log4js';
-import ContainerWorkspaces from '../../ContainerWorkspaces';
-import { SQLNode } from '../typing/types';
 
 export default class ProxmoxConnection {
     protected hostname: string;
@@ -28,21 +30,22 @@ export default class ProxmoxConnection {
 
     protected authCookie: string = '';
     protected csrfPreventionToken: string = '';
-    protected getAuthKeys: () => Promise<void> = getAuthKeys;
+    protected getAuthKeys = getAuthKeys;
     protected call: (path: string, method: string, body?: any) => Promise<any> =
         call;
-    public getNodes: () => Promise<Node[]> = getNodes;
-    public getNodesName: () => Promise<string[]> = getNodesName;
-    public createCTContainer: () => Promise<void> = createCTContainer;
-    public getNodeIP: (node: string) => Promise<string> = getNodeIP;
-    public getNodeByLocation: (Location: string) => Promise<string> =
-        getNodeByLocation;
-    protected createCTContainerInProxmox: (options: any) => Promise<void> =
-        createCTContainerInProxmox;
-    protected getFirstFineNode: (nodes: SQLNode[]) => Promise<string> =
-        getFirstFineNode;
-    protected checkIfNodeIsFine: (nodename: string) => Promise<boolean> =
-        checkIfNodeIsFine;
+    public getNodes = getNodes;
+    public getNodesName = getNodesName;
+    public createCTContainer = createCTContainer;
+    public getNodeIP = getNodeIP;
+    public getNodeByLocation = getNodeByLocation;
+    protected createCTContainerInProxmox = createCTContainerInProxmox;
+    protected getFirstFineNode = getFirstFineNode;
+    protected checkIfNodeIsFine = checkIfNodeIsFine;
+    public getContainerIP = getContainerIP;
+    public checkIfCotainerIDExists = checkIfCotainerIDExists;
+    public getContainerInfo = getContainerInfo;
+    public getContainerStatus = getContainerStatus;
+    public changeContainerStatus = changeContainerStatus;
 
     constructor({
         hostname,
@@ -61,7 +64,9 @@ export default class ProxmoxConnection {
         this.pveLogger = pveLogger;
         this.mysqlConnection = mysqlConnection;
         this.intialize();
-        this.connect().then(async () => {});
+        this.connect().then(() => {
+            printSuccess('Connected to the PVE api');
+        });
     }
 
     private intialize() {
@@ -75,6 +80,5 @@ export default class ProxmoxConnection {
         this.pveLogger.info(
             `Connected successfully to ${this.protocol}://${this.hostname}:${this.port}/`
         );
-        printSuccess('Connect successfully!');
     }
 }

@@ -20,9 +20,10 @@
     "homepage": "https://github.com/ubarilan/container-workspaces#readme",
     "dependencies": {
         "dotenv": "^10.0.0",
-        "log4js": "^6.3.0",
-        "node-fetch": "^2.6.6",
+        "log4js": "^6.4.1",
+        "node-fetch": "^2.6.7",
         "passwd-linux": "^2.0.0",
+        "read-last-lines": "^1.8.0",
         "ws": "^8.4.0"
     },
     "devDependencies": {

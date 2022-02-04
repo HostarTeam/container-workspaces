@@ -1,8 +1,9 @@
+import { NextFunction, Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
-import { Router, Request, Response } from 'express';
-import { Task } from '../typing/Task';
-import { ClientNotFoundError } from '../ws/commandAgent';
 import { MessageData } from '../typing/MessageData';
+import { Task } from '../typing/Task';
+import { ContainerStatus, LXC } from '../typing/types';
+import { ClientNotFoundError } from '../ws/commandAgent';
 
 export function initMainRouter(this: ContainerWorkspaces): void {
     this.mainRouter = Router();
@@ -12,17 +13,85 @@ export function initMainRouter(this: ContainerWorkspaces): void {
         res.send('hello');
     });
 
-    router.post(
-        '/command/send/:ipaddr',
+    /**
+     * @param {string} containerID
+     * This route is used in order to assure the validity of the given containerID param.
+     * This route then forwards the requests to the next routes.
+     */
+    router.all(
+        '/container/:containerID*',
+        async (req: Request, res: Response, next: NextFunction) => {
+            const containerID: number = Number(req.params.containerID);
+            const agentIP: string = await this.proxmoxClient.getContainerIP(
+                containerID
+            );
+
+            const ipValid: boolean = await this.checkIP(agentIP);
+
+            if (!agentIP) {
+                res.status(404).send({
+                    status: 'not foud',
+                    message: 'Could not find container with such ID',
+                });
+            } else if (!ipValid) {
+                res.status(406).send({
+                    status: 'not acceptable',
+                    message:
+                        'Specified ID belongs to a container which is not managed by our services',
+                });
+            } else {
+                req.agentIP = agentIP;
+                next();
+            }
+        }
+    );
+
+    /**
+     * @param {string} containerID
+     * This route is used in order to get the current configuration of a container.
+     */
+    router.get(
+        '/container/:containerID',
         async (req: Request, res: Response) => {
-            const ipaddr: string = req.params.ipaddr;
+            const containerID: number = Number(req.params.containerID);
+            const container: LXC = await this.proxmoxClient.getContainerInfo(
+                containerID
+            );
+
+            res.send(container);
+        }
+    );
+
+    /**
+     * @param {string} containerID
+     * This route is used in order to get the current status of a container.
+     */
+    router.get(
+        '/container/:containerID/status',
+        async (req: Request, res: Response) => {
+            const containerID: number = Number(req.params.containerID);
+            const status: ContainerStatus =
+                await this.proxmoxClient.getContainerStatus(containerID);
+
+            res.send(status);
+        }
+    );
+
+    /**
+     * @param {string} containerID
+     * This route is used in order to execute a command or multiple commands on a container.
+     */
+    router.post(
+        '/container/:containerID/exec',
+        async (req: Request, res: Response) => {
+            const containerID: number = Number(req.params.containerID);
             const data: MessageData = { ...req.body.data };
-            const task: Task = new Task({ data, ipaddr });
-            console.log('created new task: ', task.id);
-            await this.addTask(task);
+            const agentIP: string = req.agentIP;
+
+            const task: Task = new Task({ data, containerID });
 
             try {
-                this.sendCommandToAgent(task);
+                await this.sendTaskToAgent(task, agentIP);
                 res.send({ status: 'ok' });
             } catch (err: unknown) {
                 if (err instanceof ClientNotFoundError) {
@@ -38,6 +107,54 @@ export function initMainRouter(this: ContainerWorkspaces): void {
                     this.httpLogger.error(err.message);
                 }
             }
+        }
+    );
+
+    /**
+     * @param {string} containerID
+     * This route is used in order to start a container.
+     */
+    router.post(
+        '/container/:containerID/start',
+        async (req: Request, res: Response) => {
+            await this.triggerStatusChange(req, res, 'start');
+        }
+    );
+
+    /**
+     * @param {string} containerID
+     * This route is used in order to stop a container.
+     */
+    router.post(
+        '/container/:containerID/stop',
+        async (req: Request, res: Response) => {
+            await this.triggerStatusChange(req, res, 'stop');
+        }
+    );
+
+    /**
+     * @param {string} containerID
+     * This route is used in order to restart a container.
+     */
+    router.post(
+        '/container/:containerID/restart',
+        async (req: Request, res: Response) => {
+            await this.triggerStatusChange(req, res, 'reboot');
+        }
+    );
+
+    /**
+     * @param {string} containerID
+     * This route is used in order to get the last 100 lines of a contrainer's agent logs.
+     */
+    router.get(
+        '/container/:containerID/logs',
+        async (req: Request, res: Response) => {
+            const containerID: number = Number(req.params.containerID);
+            const agentIP: string = req.agentIP;
+
+            const last100lines = await this.getLogs(containerID, agentIP);
+            debugger;
         }
     );
 }
