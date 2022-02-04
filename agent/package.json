@@ -24,11 +24,13 @@
         "node-fetch": "^2.6.7",
         "passwd-linux": "^2.0.0",
         "read-last-lines": "^1.8.0",
+        "tail": "^2.2.4",
         "ws": "^8.4.0"
     },
     "devDependencies": {
         "@types/node": "^17.0.7",
         "@types/node-fetch": "^2.5.12",
+        "@types/tail": "^2.2.1",
         "@types/ws": "^8.2.2"
     }
 }

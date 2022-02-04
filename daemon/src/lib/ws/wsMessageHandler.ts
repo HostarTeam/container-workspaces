@@ -1,7 +1,10 @@
 import { IncomingMessage } from 'http';
 import WebSocket, { RawData } from 'ws';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
-import { InvalidMessageError, MessageData } from '../typing/MessageData';
+import {
+    InvalidMessageError,
+    MessageDataResponse,
+} from '../typing/MessageData';
 
 export function handleMessage(
     this: ContainerWorkspaces,
@@ -11,7 +14,7 @@ export function handleMessage(
 ): void {
     try {
         const messageJSON = JSON.parse(message.toString());
-        const messageData = new MessageData(messageJSON);
+        const messageData = new MessageDataResponse(messageJSON);
         this.wsLogger.info(
             `${req.socket.remoteAddress} - ${messageData.action} - ${messageData.method}`
         );

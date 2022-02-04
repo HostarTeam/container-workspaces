@@ -7,11 +7,7 @@ export async function sendTaskToAgent(
     task: Task,
     ipaddr: string
 ): Promise<void> {
-    const clientList: WebSocket[] = Array.from(this.wss.clients);
-
-    const selectedClient: WebSocket = clientList.find(
-        (client: any) => client._socket.remoteAddress === ipaddr
-    );
+    const selectedClient = this.getConnectedClient(ipaddr);
 
     if (!selectedClient)
         throw new ClientNotFoundError(

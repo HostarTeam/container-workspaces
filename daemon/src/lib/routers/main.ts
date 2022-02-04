@@ -153,8 +153,24 @@ export function initMainRouter(this: ContainerWorkspaces): void {
             const containerID: number = Number(req.params.containerID);
             const agentIP: string = req.agentIP;
 
-            const last100lines = await this.getLogs(containerID, agentIP);
-            debugger;
+            const connectedAgent = this.getConnectedClient(agentIP);
+
+            if (!connectedAgent) {
+                res.status(409).send({
+                    status: 'conflict',
+                    message:
+                        'Container with given ID is not connected to this server',
+                });
+            } else {
+                const last100lines = await this.getLogs(containerID, agentIP);
+                if (last100lines)
+                    res.send({ status: 'ok', data: last100lines });
+                else
+                    res.status(409).send({
+                        status: 'conflict',
+                        message: 'no logs found',
+                    });
+            }
         }
     );
 }

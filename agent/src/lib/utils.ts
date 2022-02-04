@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import { AgentConfiguration } from './typing/types';
+import { execSync } from 'child_process';
 
 export function generatePassword(length: number): string {
     var result: string = '';
@@ -44,6 +45,14 @@ export async function readConfFile(
         printError('Could not parse config file');
         process.exit(1);
     }
+}
+
+export function getLastLines(logFilePath: string, lines: number = 100): string {
+    const stdout = execSync(`tail -n ${lines} ${logFilePath}`, {
+        encoding: 'utf8',
+    });
+
+    return stdout;
 }
 
 enum Colors {

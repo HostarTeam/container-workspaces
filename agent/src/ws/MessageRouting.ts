@@ -3,7 +3,7 @@ import Agent from '../Agent';
 import { CommandErrorReport } from '../lib/typing/types';
 import { MessageDataResponse } from '../lib/typing/MessageData';
 import { Task } from '../lib/typing/Task';
-import { read } from 'read-last-lines';
+import { getLastLines } from '../lib/utils';
 
 export default class MessageRouting {
     [key: string]: (agent: Agent, task: Task) => Promise<void>;
@@ -58,7 +58,7 @@ export default class MessageRouting {
 
     public static async send_logs(agent: Agent, task: Task): Promise<void> {
         try {
-            const lines = await read(
+            const lines = getLastLines(
                 agent.logFilePath,
                 task.data.args.linesCount
             );

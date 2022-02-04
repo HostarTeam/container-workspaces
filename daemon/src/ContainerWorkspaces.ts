@@ -18,7 +18,7 @@ import {
     validateAuth,
 } from './lib/utils';
 import ProxmoxConnection from './lib/proxmox/ProxmoxConnection';
-import { WebSocketServer } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 import { connectToDatabase } from './lib/mysql';
 import { handleMessage } from './lib/ws/wsMessageHandler';
 import { wsCommand } from './lib/ws/routing/wsCommand';
@@ -39,7 +39,7 @@ export default class ContainerWorkspaces {
     public httpLogger: Logger;
     public wsLogger: Logger;
     public pveLogger: Logger;
-    public loglines: Map<Task['id'], string> = new Map();
+    public logLines: Map<Task['id'], string> = new Map();
 
     protected initMainRouter = initMainRouter;
     protected initAgentRouter = initAgentRouter;
@@ -234,12 +234,25 @@ export default class ContainerWorkspaces {
         await this.sendTaskToAgent(task, ip);
 
         // God please forgive us for this sin we're about to commit
-        for (let i = 0; i < 8; i++) {
-            await sleep(300);
-            const lines = this.loglines.get(task.id);
-            if (lines) return lines;
+        console.time('for');
+        for (let i = 0; i < 10; i++) {
+            await sleep(20);
+            const lines = this.logLines.get(task.id);
+            if (lines) {
+                console.timeEnd('for');
+                return lines;
+            }
         }
 
         return null;
+    }
+
+    protected getConnectedClient(ip: string): WebSocket | null {
+        const clientList: WebSocket[] = Array.from(this.wss.clients);
+        const selectedClient: WebSocket = clientList.find(
+            (client: any) => client._socket.remoteAddress === ip
+        );
+
+        return selectedClient;
     }
 }

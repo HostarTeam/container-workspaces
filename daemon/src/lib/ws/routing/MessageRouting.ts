@@ -48,7 +48,7 @@ export default class MessageRouting {
                 `Error in agent with id ${task.containerID} in task ${task.id} - ${messageData.args.errorReport.message}`
             );
         } else {
-            cw.loglines.set(task.id, messageData.args.lines);
+            cw.logLines.set(task.id, messageData.args.lines);
             // cw.updateTask(messageData);
             cw.wsLogger.info(
                 `Succeded agent with id ${task.containerID} in task ${task.id} - ${messageData.args.status}`
