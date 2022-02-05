@@ -17,11 +17,11 @@ export function printError(message): void {
 }
 
 export function printWarning(message): void {
-    console.log(`${Colors.Yellow}Warning: ${Colors.Reset}${message}`);
+    console.log(`${Colors.Yellow}Warning:  ${Colors.Reset}${message}`);
 }
 
 export function printSuccess(message): void {
-    console.log(`${Colors.Green}Success: ${Colors.Reset}${message}`);
+    console.log(`${Colors.Green}Success:  ${Colors.Reset}${message}`);
 }
 
 export async function readConfFile(): Promise<Configuration> {

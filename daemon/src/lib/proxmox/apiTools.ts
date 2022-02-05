@@ -109,7 +109,13 @@ export async function deleteContainer(
         const ip: SQLIP = await this.getIP(ipv4);
         await this.updateIPUsedStatus(ip, false);
         await this.deleteContainerFromDB(id);
-        if (deletedRes) return { error: null, ok: true };
+        if (deletedRes && deletedRes.data && !deletedRes.errors)
+            return { error: null, ok: true };
+        this.pveLogger.error(
+            `LXC container could not be deleted - ${deletedRes.errors
+                .getValues()
+                .join(' - ')}`
+        );
         return { error: 'Could not delete container in proxmox', ok: false };
     } catch (error) {
         this.pveLogger.error(`Can't delete container ${id} - ${error.message}`);
@@ -159,7 +165,10 @@ export async function createContainer(
     const node = await this.getNodeByLocation(location);
     const options = config['ct_options'];
     const ip = await this.getFreeIP();
-    if (!ip) return { error: 'Could not find free IP', ok: false };
+    if (!ip) {
+        this.pveLogger.error(`Could not find free ip while creating container`);
+        return { error: 'Could not find free IP', ok: false };
+    }
     await this.updateIPUsedStatus(ip, true);
     return await this.createContainerInProxmox({
         options,
@@ -216,14 +225,13 @@ export async function createContainerInProxmox(
             );
             await this.addCotainerToDatabase(nextID, ip.ipv4, node);
             return { error: null, ok: true };
-        } else {
-            this.pveLogger.error(
-                `LXC container could not be created - ${res.errors
-                    .getValues()
-                    .join(' - ')}`
-            );
-            return { error: res.errors.toString(), ok: false };
         }
+        this.pveLogger.error(
+            `LXC container could not be created - ${res.errors
+                .getValues()
+                .join(' - ')}`
+        );
+        return { error: 'Could not create container in proxmox', ok: false };
     } catch (err) {
         this.pveLogger.error('Could not create a LXC container');
         return { error: err.message, ok: false };
