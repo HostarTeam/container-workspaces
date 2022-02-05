@@ -13,9 +13,6 @@ config();
 async function main() {
     const config: Configuration = await readConfFile();
     const currentServer: ContainerWorkspaces = new ContainerWorkspaces(config);
-    printSuccess('suc');
-    printWarning('warn');
-    printError('err');
 }
 
 main();
