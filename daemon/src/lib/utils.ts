@@ -42,24 +42,6 @@ export async function readConfFile(): Promise<Configuration> {
     }
 }
 
-export async function readInitCommandsFile(): Promise<Configuration> {
-    const fileLocation: string = '/etc/container-workspaces/initcommands.json';
-    let fileContent = '';
-    try {
-        fileContent = await readFileSync(fileLocation, 'utf8');
-    } catch (error: unknown) {
-        printError(`Could not read from config file at ${fileLocation}`);
-        process.exit(1);
-    }
-    try {
-        const config: Configuration = JSON.parse(fileContent);
-        return config;
-    } catch (error: unknown) {
-        printError('Could not parse config file');
-        process.exit(1);
-    }
-}
-
 export function getAuthKey(req: Request): string | null {
     const headerValue = req.headers['authorization'];
     if (!headerValue) return null;

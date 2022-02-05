@@ -26,9 +26,10 @@ import { wsCommand } from './lib/ws/routing/wsCommand';
 import { sendTaskToAgent } from './lib/ws/commandAgent';
 import { Task } from './lib/typing/Task';
 import { Connection } from 'mysql2/promise';
-import { status } from './lib/typing/types';
+import { Config, status } from './lib/typing/types';
 import { MessageData } from './lib/typing/MessageData';
 import { initConfigRouter } from './lib/routers/config';
+import { CTOptions } from './lib/typing/options';
 
 export default class ContainerWorkspaces {
     private httpServer: Server;
@@ -142,10 +143,9 @@ export default class ContainerWorkspaces {
 
         this.httpServer.on('upgrade', (request, socket, head) => {
             this.wss.handleUpgrade(request, socket, head, async (socket) => {
-                // TODO: bring back the checkIP function on production
-                let isAuthorized: boolean = true; /*await this.checkIP(
+                let isAuthorized: boolean = await this.checkIP(
                     request.socket.remoteAddress
-                ); */
+                );
 
                 if (isAuthorized) this.wss.emit('connection', socket, request);
                 else socket.close();
@@ -323,5 +323,42 @@ export default class ContainerWorkspaces {
                 next();
             }
         };
+    }
+
+    private async getConfig(): Promise<Config> {
+        const sql: string = `SELECT * FROM config`;
+        const result = (await this.mysqlConnection.query(sql))[0][0];
+        if (!result) return null;
+        const config: Config = JSON.parse(result.config);
+        return config;
+    }
+
+    private async updateConfig(config: Config): Promise<void> {
+        const sql: string = `UPDATE config SET config = ?`;
+        await this.mysqlConnection.query(sql, [JSON.stringify(config)]);
+    }
+
+    protected async getCTOptions(): Promise<CTOptions> {
+        const config = await this.getConfig();
+        return config['ct_options'];
+    }
+
+    protected async udpateCTOptions(options: CTOptions): Promise<void> {
+        let config = await this.getConfig();
+        config['ct_options'] = options;
+
+        await this.updateConfig(config);
+    }
+
+    protected async getInitCommands(): Promise<string[]> {
+        const config = await this.getConfig();
+        return config['init_commands'];
+    }
+
+    protected async updateInitCommands(commands: string[]): Promise<void> {
+        let config = await this.getConfig();
+        config['init_commands'] = commands;
+
+        await this.updateConfig(config);
     }
 }

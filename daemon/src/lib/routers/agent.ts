@@ -1,49 +1,30 @@
 import ContainerWorkspaces from '../../ContainerWorkspaces';
-import { Router, Request, Response } from 'express';
-import { readInitCommandsFile } from '../utils';
-import { CommandError, CommandType } from '../typing/types';
+import { Router, Request, Response, NextFunction } from 'express';
+import { CommandError } from '../typing/types';
 
 export function initAgentRouter(this: ContainerWorkspaces): void {
     this.agentRouter = Router();
     const router: Router = this.agentRouter;
 
-    router.get('/', (req: Request, res: Response) => {
-        res.send('hello');
-    });
-
-    router.post('/newct', (req: Request, res: Response) => {
-        const password: string = req.body.password;
-        const ip: string = req.ip;
-
-        if (!password)
-            return res.status(400).send({
-                status: 'error',
-                message: "password isn't specified in body",
+    router.all('*', async (req: Request, res: Response, next: NextFunction) => {
+        const validIP = this.checkIP(req.ip);
+        if (validIP) next();
+        else {
+            res.status(403).send({
+                status: 'forbidden',
+                message: 'IP not allowed',
             });
-        res.send({ status: 'ok' });
+        }
     });
 
     router.get('/initcommands', async (req: Request, res: Response) => {
-        // const ip: string = req.ip;
-        const initCommands = await readInitCommandsFile();
+        const initCommands = await this.getInitCommands();
         res.send(initCommands);
     });
 
     router.post('/command/reporterror', (req: Request, res: Response) => {
-        const {
-            command,
-            stderr,
-            stdout,
-            exitCode,
-            stack,
-            message,
-        }: CommandError = req.body;
-        const commandType = req.query.commandType as CommandType;
-        if (!commandType)
-            return res.status(400).send({
-                message: 'commandType not specified',
-                status: 'error',
-            });
+        const { command, stderr, stdout, exitCode, message }: CommandError =
+            req.body;
         if (!command)
             return res
                 .status(400)
@@ -53,10 +34,9 @@ export function initAgentRouter(this: ContainerWorkspaces): void {
                 .status(400)
                 .send({ message: 'exitCode not specified', status: 'error' });
 
-        res.send({ status: 'ok', message: 'report received' });
-    });
-
-    router.post('/command/initok', (req: Request, res: Response) => {
+        this.httpLogger.error(
+            `Error report - ${command} - ${message} - Exit code: ${exitCode} - Stdout: ${stdout} - Stderr: ${stderr}`
+        );
         res.send({ status: 'ok', message: 'report received' });
     });
 }

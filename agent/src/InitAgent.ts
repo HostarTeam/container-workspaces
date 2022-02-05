@@ -41,25 +41,16 @@ export default class InitAgent {
                     stdio: 'pipe',
                 });
             } catch (err: unknown) {
-                await this.reportCommandErrors(command, err, apiServer, true);
+                await this.reportCommandErrors(command, err, apiServer);
                 process.exit(1);
             }
         }
-
-        await this.sendInitSuccessStatus(apiServer);
-    }
-
-    private async sendInitSuccessStatus(apiServer: string): Promise<void> {
-        await fetch(`${apiServer}/api/agent/command/initsuccess`, {
-            method: 'POST',
-        });
     }
 
     private async reportCommandErrors(
         command: string,
         errorData: any,
-        apiServer: string,
-        isInit = false
+        apiServer: string
     ): Promise<void> {
         const report: CommandErrorReport = {
             command,
@@ -69,18 +60,13 @@ export default class InitAgent {
             stack: errorData.stack,
             message: errorData.message,
         };
-        await fetch(
-            `${apiServer}/api/agent/command/reporterror?commandType=${
-                isInit ? 'init' : 'realtime'
-            }`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'Application/JSON',
-                },
-                body: JSON.stringify(report),
-            }
-        );
+        await fetch(`${apiServer}/api/agent/command/reporterror`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'Application/JSON',
+            },
+            body: JSON.stringify(report),
+        });
     }
 
     private async setAsRan(location = '/var/local/cw/initran'): Promise<void> {

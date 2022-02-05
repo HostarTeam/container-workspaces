@@ -2,6 +2,7 @@ import { NextFunction, Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { Node, SQLIP, SQLNode } from '../typing/types';
 import { requireBodyProps } from '../utils';
+import { CTOptions } from '../typing/options';
 
 export function initConfigRouter(this: ContainerWorkspaces): void {
     this.configRouter = Router();
@@ -186,5 +187,59 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
                 message: 'IP removed successfully',
             });
         }
+    });
+
+    /**
+     * This route is used in order to get the ct options
+     */
+    router.get('/ctoptions', async (req: Request, res: Response) => {
+        const ctOptions: CTOptions = await this.getCTOptions();
+
+        if (ctOptions) res.send(ctOptions);
+        else
+            res.send({
+                status: 'error',
+                message: 'Could not find ct options',
+            });
+    });
+
+    /**
+     * This route is used in order to update the ct options in the database
+     * @param {CTOptions} CTOptions The ct options in req.body.
+     */
+    router.put(
+        '/ctoptions',
+        requireBodyProps('ct_options'),
+        async (req: Request, res: Response) => {
+            const ctOptions = req.body.ct_options;
+            await this.udpateCTOptions(ctOptions);
+            res.send({
+                status: 'ok',
+                message: 'CT options updated successfully',
+            });
+        }
+    );
+
+    /**
+     * This route is used in order to get the init commands from the config table in the database.
+     */
+
+    router.get('/initcommands', async (req: Request, res: Response) => {
+        const initCommands: string[] = await this.getInitCommands();
+
+        res.send(initCommands);
+    });
+
+    /**
+     * This route is used in order to update the init commands in the database.
+     * @param {string[]} initCommands The init commands in req.body.
+     */
+    router.put('/initcommands', async (req: Request, res: Response) => {
+        const initCommands: string[] = req.body.init_commands;
+        await this.updateInitCommands(initCommands);
+        res.send({
+            status: 'ok',
+            message: 'Init commands updated successfully',
+        });
     });
 }

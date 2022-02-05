@@ -1,4 +1,5 @@
 import MessageRouting from '../ws/routing/MessageRouting';
+import { CTOptions } from './options';
 
 export interface Configuration {
     apiKey: string;
@@ -31,8 +32,6 @@ export interface CommandError {
     stack: string;
     message: string;
 }
-
-export type CommandType = 'realtime' | 'init';
 
 export type MessageRoutingHandler = MessageRouting[keyof MessageRouting];
 
@@ -198,4 +197,9 @@ export interface SQLIP {
 export interface ActionResult {
     error: null | string;
     ok: boolean;
+}
+
+export interface Config {
+    ct_options: CTOptions;
+    init_commands: string[];
 }
