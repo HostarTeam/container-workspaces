@@ -152,3 +152,22 @@ export function netmaskToCIDR(netmask: string): number {
 export function validateIP(ip: string): boolean {
     return /^(?!0)(?!.*\.$)((1?\d?\d|25[0-5]|2[0-4]\d)(\.|$)){4}$/.test(ip);
 }
+
+// Validate that a given string is between 5 and 100 characters long
+export function validatePassword(password: string): boolean {
+    return password.length >= 5 && password.length <= 100;
+}
+
+export function requireBodyProps(...props: string[]): Handler {
+    return function (req: Request, res: Response, next: NextFunction) {
+        for (const prop of props) {
+            if (!req.body[prop]) {
+                return res.status(400).send({
+                    status: 'bad request',
+                    message: `Property ${prop} is missing from body`,
+                });
+            }
+        }
+        next();
+    };
+}

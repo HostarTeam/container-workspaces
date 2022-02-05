@@ -2,7 +2,8 @@ import { NextFunction, Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { MessageData } from '../typing/MessageData';
 import { Task } from '../typing/Task';
-import { ContainerStatus, LXC } from '../typing/types';
+import { ActionResult, ContainerStatus, LXC } from '../typing/types';
+import { requireBodyProps, validatePassword } from '../utils';
 import { ClientNotFoundError } from '../ws/commandAgent';
 
 export function initMainRouter(this: ContainerWorkspaces): void {
@@ -221,15 +222,17 @@ export function initMainRouter(this: ContainerWorkspaces): void {
         async (req: Request, res: Response) => {
             const containerID: number = Number(req.params.containerID);
 
-            const deleted: boolean = await this.proxmoxClient.deleteContainer(
-                containerID,
-                req.agentIP
-            );
-            if (deleted) res.send({ status: 'ok' });
+            const deleted: ActionResult =
+                await this.proxmoxClient.deleteContainer(
+                    containerID,
+                    req.agentIP
+                );
+            if (deleted.ok) res.send({ status: 'ok' });
             else
                 res.status(409).send({
                     status: 'conflict',
                     message: 'could not delete container',
+                    error: deleted.error,
                 });
         }
     );
@@ -238,21 +241,39 @@ export function initMainRouter(this: ContainerWorkspaces): void {
      * @param {string} containerID
      * @param {string} location The location of the container in req.body.
      * @param {string} template The template of the container in req.body.
+     * @param {string} password The password of the container in req.body.
      * Thie route is used in order to create a container.
      */
-    router.post('/container/create', async (req: Request, res: Response) => {
-        const location = String(req.body.location);
-        const template = String(req.body.template);
-        const created = await this.proxmoxClient.createContainer(
-            location,
-            template
-        );
+    router.post(
+        '/container/create',
+        requireBodyProps('location', 'template', 'password'),
+        async (req: Request, res: Response) => {
+            const location = String(req.body.location);
+            const template = String(req.body.template);
+            const password = String(req.body.password);
 
-        if (created) res.send({ status: 'ok' });
-        else
-            res.status(409).send({
-                status: 'conflict',
-                message: 'could not create container',
+            const passwordValid: boolean = validatePassword(password);
+            if (!passwordValid) {
+                return res.status(400).send({
+                    status: 'bad request',
+                    message:
+                        'password is not valid, it must be between 5 and 100 characters long',
+                });
+            }
+
+            const created = await this.proxmoxClient.createContainer({
+                location,
+                template,
+                password,
             });
-    });
+
+            if (created.ok) res.send({ status: 'ok' });
+            else
+                res.status(409).send({
+                    status: 'conflict',
+                    message: 'could not create container',
+                    error: created.error,
+                });
+        }
+    );
 }

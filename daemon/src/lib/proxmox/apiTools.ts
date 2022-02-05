@@ -2,9 +2,9 @@ import fetch, { Response } from 'node-fetch';
 import ProxmoxConnection from './ProxmoxConnection';
 import { generatePassword, netmaskToCIDR, printError } from '../utils';
 import {
+    ActionResult,
     ClusterNode,
     ContainerStatus,
-    CTOptions,
     LXC,
     Node,
     ProxmoxResponse,
@@ -12,6 +12,7 @@ import {
     SQLNode,
     status,
 } from '../typing/types';
+import { CraeteCTOptions, CTOptions } from '../typing/options';
 
 export function call(
     this: ProxmoxConnection,
@@ -98,7 +99,7 @@ export async function deleteContainer(
     this: ProxmoxConnection,
     id: number,
     ipv4: string
-): Promise<boolean> {
+): Promise<ActionResult> {
     try {
         const node: string = await this.getNodeOfContainer(id);
         const deletedRes = await this.call(
@@ -108,11 +109,11 @@ export async function deleteContainer(
         const ip: SQLIP = await this.getIP(ipv4);
         await this.updateIPUsedStatus(ip, false);
         await this.deleteContainerFromDB(id);
-
-        return !!deletedRes.data;
+        if (deletedRes) return { error: null, ok: true };
+        return { error: 'Could not delete container in proxmox', ok: false };
     } catch (error) {
         this.pveLogger.error(`Can't delete container ${id} - ${error.message}`);
-        return false;
+        return { error: error.message, ok: false };
     }
 }
 
@@ -148,45 +149,58 @@ export async function updateIPUsedStatus(
 
 export async function createContainer(
     this: ProxmoxConnection,
-    location: string,
-    template: string
-): Promise<boolean> {
+    { location, template, password }: CraeteCTOptions
+): Promise<ActionResult> {
     const sql = `SELECT * FROM config`;
     const config = JSON.parse(
         (await this.mysqlConnection.query(sql))[0][0]['config']
     );
 
     const node = await this.getNodeByLocation(location);
-    const ctOptions = config['ct_options'];
+    const options = config['ct_options'];
     const ip = await this.getFreeIP();
-    if (!ip) return false;
+    if (!ip) return { error: 'Could not find free IP', ok: false };
     await this.updateIPUsedStatus(ip, true);
-    return await this.createContainerInProxmox(ctOptions, node, template, ip);
+    return await this.createContainerInProxmox({
+        options,
+        node,
+        template,
+        ip,
+        password,
+    });
 }
 
 export async function createContainerInProxmox(
     this: ProxmoxConnection,
-    options: CTOptions,
-    node: string,
-    template: string,
-    ip: SQLIP
-): Promise<boolean> {
+    {
+        options,
+        node,
+        template,
+        ip,
+        password,
+    }: {
+        options: CTOptions;
+        node: string;
+        template: string;
+        ip: SQLIP;
+        password: string;
+    }
+): Promise<ActionResult> {
     try {
         const nextIDRes = await this.call('cluster/nextid', 'GET');
         const nextID = nextIDRes.data;
         if (!nextID) {
             this.pveLogger.error(`Couldn't find LXC container ID`);
-            throw Error(`Couldn't find LXC container ID`);
+            return { error: `Couldn't find LXC container ID`, ok: false };
         }
 
-        const generatedPassword: string = generatePassword(16);
         const body: LXC = {
             ostemplate: template, // template for example: 'local:vztmpl/debian-9.0-amd64-standard_9.0-3_amd64.tar.gz'
             vmid: nextID,
             cores: options.ct_cores,
             description: 'Created by the API',
             hostname: nextID.toString(),
-            password: generatedPassword,
+            password,
             rootfs: `local-lvm:${options.ct_disk}`,
             memory: options.ct_ram,
             swap: options.ct_swap,
@@ -201,19 +215,19 @@ export async function createContainerInProxmox(
                 `LXC container with ID ${nextID} has been created successfully`
             );
             await this.addCotainerToDatabase(nextID, ip.ipv4, node);
-            return true;
-        } else
+            return { error: null, ok: true };
+        } else {
             this.pveLogger.error(
                 `LXC container could not be created - ${res.errors
                     .getValues()
                     .join(' - ')}`
             );
-
-        console.log(`LXC container with message\n`, res);
+            return { error: res.errors.toString(), ok: false };
+        }
     } catch (err) {
         this.pveLogger.error('Could not create a LXC container');
+        return { error: err.message, ok: false };
     }
-    return false;
 }
 
 export async function addCotainerToDatabase(

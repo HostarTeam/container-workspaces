@@ -131,13 +131,6 @@ export interface ClusterNode {
     quorate?: 0 | 1;
 }
 
-export interface CTOptions {
-    ct_cores: number;
-    ct_disk: number;
-    ct_ram: number;
-    ct_swap: number;
-}
-
 export interface SQLNode {
     id: number;
     nodename: string;
@@ -200,4 +193,9 @@ export interface SQLIP {
     gateway: string;
     netmask: string;
     used: 0 | 1;
+}
+
+export interface ActionResult {
+    error: null | string;
+    ok: boolean;
 }
