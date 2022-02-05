@@ -61,8 +61,73 @@ export function call(
 }
 
 export async function getNodes(this: ProxmoxConnection): Promise<Node[]> {
-    let res = await this.call('nodes', 'GET');
-    return res.data;
+    const PVENodes: Node[] = (await this.call('nodes', 'GET')).data;
+    const sql = 'SELECT nodename FROM nodes';
+    const SQLNodes: { nodename: string }[] = (
+        await this.mysqlConnection.query(sql)
+    )[0];
+    const SQLNodenames: string[] = SQLNodes.map((node) => node.nodename);
+    const nodes = PVENodes.filter((node) => SQLNodenames.includes(node.node));
+    return nodes;
+}
+
+export async function getPVENode(
+    this: ProxmoxConnection,
+    nodename: string
+): Promise<{ node: Node; existsInDatabase: boolean }> {
+    const nodes = await this.getNodes();
+    const node = nodes.find((node) => node.node === nodename);
+    const sql = 'SELECT nodename FROM nodes WHERE nodename = ?';
+    const existsInDatabase = !!(await this.mysqlConnection.query(sql, [
+        nodename,
+    ])[0][0]);
+    return { node, existsInDatabase };
+}
+
+export async function getSQLNodes(this: ProxmoxConnection): Promise<SQLNode[]> {
+    const sql = 'SELECT * FROM nodes';
+    const nodes = (await this.mysqlConnection.query(sql))[0];
+    return nodes;
+}
+
+export async function getSQLNode(
+    this: ProxmoxConnection,
+    nodename: string
+): Promise<SQLNode> {
+    const sql = 'SELECT * FROM nodes WHERE nodename = ?';
+    const node = (await this.mysqlConnection.query(sql, [nodename]))[0][0];
+    if (!node) return null;
+    return node;
+}
+
+export async function addNodeToDatabase(
+    this: ProxmoxConnection,
+    node: SQLNode
+): Promise<void> {
+    const sql =
+        'INSERT INTO nodes (nodename, is_main ip, location) VALUES (?, ?, ?, ?)';
+    await this.mysqlConnection.query(sql, [
+        node.nodename,
+        node.is_main ? 1 : 0,
+        node.ip,
+        node.location,
+    ]);
+}
+
+export async function removeNodeFromDatabase(
+    this: ProxmoxConnection,
+    nodename: string
+): Promise<void> {
+    const sql = 'DELETE FROM nodes WHERE nodename = ?';
+    await this.mysqlConnection.query(sql, [nodename]);
+}
+
+export async function getLocations(this: ProxmoxConnection): Promise<string[]> {
+    const sql = 'SELECT DISTINCT location FROM nodes';
+    const locations = (await this.mysqlConnection.query(sql))[0].map(
+        (node) => node.location
+    );
+    return locations;
 }
 
 export async function getAuthKeys(this: ProxmoxConnection): Promise<void> {
@@ -130,6 +195,35 @@ export async function getFreeIP(
     const result: SQLIP | null = (await this.mysqlConnection.query(sql))[0][0];
     if (!result) return null;
     return result;
+}
+
+export async function getIPs(this: ProxmoxConnection): Promise<SQLIP[]> {
+    const sql: string = 'SELECT * FROM ips';
+    const result: SQLIP[] = (await this.mysqlConnection.query(sql))[0];
+    if (!result) return null;
+    return result;
+}
+
+export async function addIPToDatabase(
+    this: ProxmoxConnection,
+    ip: SQLIP
+): Promise<void> {
+    const sql =
+        'INSERT INTO ips (ipv4, gateway, netmask, used) VALUES (?, ?, ?, ?)';
+    await this.mysqlConnection.query(sql, [
+        ip.ipv4,
+        ip.gateway,
+        ip.netmask,
+        ip.used ? 1 : 0,
+    ]);
+}
+
+export async function removeIPFromDatabase(
+    this: ProxmoxConnection,
+    ipv4: string
+): Promise<void> {
+    const sql = 'DELETE FROM ips WHERE ipv4 = ?';
+    await this.mysqlConnection.query(sql, [ipv4]);
 }
 
 export async function getIP(
@@ -346,7 +440,10 @@ export async function getContainerStatus(
 ): Promise<ContainerStatus> {
     const nodename = await this.getNodeOfContainer(id);
     if (!nodename) return null;
-    let ctConfig = await this.call(`nodes/${nodename}/lxc/${id}/status/current`, 'GET');
+    let ctConfig = await this.call(
+        `nodes/${nodename}/lxc/${id}/status/current`,
+        'GET'
+    );
     const containerData: ContainerStatus = ctConfig.data;
     return containerData;
 }

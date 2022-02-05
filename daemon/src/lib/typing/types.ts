@@ -132,9 +132,9 @@ export interface ClusterNode {
 }
 
 export interface SQLNode {
-    id: number;
+    id?: number;
     nodename: string;
-    is_main: 1 | 0;
+    is_main: boolean;
     ip: string;
     location: string;
 }
@@ -188,11 +188,11 @@ export type status =
     | 'reboot';
 
 export interface SQLIP {
-    id: number;
+    id?: number;
     ipv4: string;
     gateway: string;
     netmask: string;
-    used: 0 | 1;
+    used: boolean;
 }
 
 export interface ActionResult {

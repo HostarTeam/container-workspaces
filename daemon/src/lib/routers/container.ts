@@ -247,7 +247,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
                 password,
             });
 
-            if (created.ok) res.send({ status: 'ok' });
+            if (created.ok) res.status(201).send({ status: 'created' });
             else
                 res.status(409).send({
                     status: 'conflict',

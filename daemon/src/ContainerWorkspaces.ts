@@ -28,6 +28,7 @@ import { Task } from './lib/typing/Task';
 import { Connection } from 'mysql2/promise';
 import { status } from './lib/typing/types';
 import { MessageData } from './lib/typing/MessageData';
+import { initConfigRouter } from './lib/routers/config';
 
 export default class ContainerWorkspaces {
     private httpServer: Server;
@@ -44,6 +45,7 @@ export default class ContainerWorkspaces {
 
     protected initMainRouter = initMainRouter;
     protected initAgentRouter = initAgentRouter;
+    protected initConfigRouter = initConfigRouter;
     protected initContainerRouter = initContainerRouter;
     private connectToDatabase = connectToDatabase;
     protected handleMessage = handleMessage;
@@ -56,6 +58,7 @@ export default class ContainerWorkspaces {
     protected mainRouter: Router;
     protected agentRouter: Router;
     protected containerRouter: Router;
+    protected configRouter: Router;
     protected webSockerRouter;
     protected proxmoxClient: ProxmoxConnection;
     public mysqlConnection: Connection;
@@ -109,6 +112,7 @@ export default class ContainerWorkspaces {
         // Routers
         this.webApp.use('/api/agent', this.agentRouter);
         this.webApp.use('/api/container', this.containerRouter);
+        this.webApp.use('/api/config', this.configRouter);
         this.webApp.use('/api', this.mainRouter);
 
         this.httpServer.on('request', this.webApp);
@@ -164,6 +168,7 @@ export default class ContainerWorkspaces {
     }
 
     private initRouters(): void {
+        this.initConfigRouter();
         this.initContainerRouter();
         this.initMainRouter();
         this.initAgentRouter();

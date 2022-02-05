@@ -1,28 +1,37 @@
+import { Logger } from 'log4js';
 import { httpProtocol } from '../typing/types';
 import { getNodesName, printSuccess } from '../utils';
 import {
+    addCotainerToDatabase,
+    addIPToDatabase,
+    addNodeToDatabase,
     call,
+    changeContainerStatus,
+    checkIfNodeIsFine,
     createContainer,
     createContainerInProxmox,
+    deleteContainer,
+    deleteContainerFromDB,
     getAuthKeys,
+    getContainerInfo,
+    getContainerIP,
+    getContainerStatus,
+    getFirstFineNode,
+    getFreeIP,
+    getIP,
+    getIPs,
+    getLocations,
     getNodeByLocation,
     getNodeIP,
-    getNodes,
-    getFirstFineNode,
-    checkIfNodeIsFine,
-    getContainerIP,
     getNodeOfContainer,
-    getContainerInfo,
-    getContainerStatus,
-    changeContainerStatus,
-    deleteContainer,
-    getFreeIP,
+    getNodes,
+    getPVENode,
+    getSQLNode,
+    getSQLNodes,
+    removeIPFromDatabase,
+    removeNodeFromDatabase,
     updateIPUsedStatus,
-    addCotainerToDatabase,
-    getIP,
-    deleteContainerFromDB,
 } from './apiTools';
-import { Logger } from 'log4js';
 
 export default class ProxmoxConnection {
     protected hostname: string;
@@ -50,7 +59,6 @@ export default class ProxmoxConnection {
     protected getFreeIP = getFreeIP;
     protected updateIPUsedStatus = updateIPUsedStatus;
     protected addCotainerToDatabase = addCotainerToDatabase;
-    protected getIP = getIP;
     protected deleteContainerFromDB = deleteContainerFromDB;
     public getContainerIP = getContainerIP;
     public getNodeOfContainer = getNodeOfContainer;
@@ -58,6 +66,16 @@ export default class ProxmoxConnection {
     public getContainerStatus = getContainerStatus;
     public changeContainerStatus = changeContainerStatus;
     public deleteContainer = deleteContainer;
+    public getPVENode = getPVENode;
+    public getSQLNodes = getSQLNodes;
+    public addNodeToDatabase = addNodeToDatabase;
+    public removeNodeFromDatabase = removeNodeFromDatabase;
+    public getLocations = getLocations;
+    public getSQLNode = getSQLNode;
+    public getIP = getIP;
+    public getIPs = getIPs;
+    public addIPToDatabase = addIPToDatabase;
+    public removeIPFromDatabase = removeIPFromDatabase;
 
     constructor({
         hostname,
