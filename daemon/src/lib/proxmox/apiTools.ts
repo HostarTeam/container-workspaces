@@ -346,7 +346,7 @@ export async function getContainerStatus(
 ): Promise<ContainerStatus> {
     const nodename = await this.getNodeOfContainer(id);
     if (!nodename) return null;
-    let ctConfig = await this.call(`nodes/${nodename}/lxc/${id}/status`, 'GET');
+    let ctConfig = await this.call(`nodes/${nodename}/lxc/${id}/status/current`, 'GET');
     const containerData: ContainerStatus = ctConfig.data;
     return containerData;
 }
