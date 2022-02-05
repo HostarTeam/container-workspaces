@@ -10,6 +10,7 @@ import { createServer, Server } from 'http';
 import { Log4js, Logger } from 'log4js';
 import { initMainRouter } from './lib/routers/main';
 import { initAgentRouter } from './lib/routers/agent';
+import { initContainerRouter } from './lib/routers/container';
 import {
     checkIP,
     createLoggers,
@@ -43,6 +44,7 @@ export default class ContainerWorkspaces {
 
     protected initMainRouter = initMainRouter;
     protected initAgentRouter = initAgentRouter;
+    protected initContainerRouter = initContainerRouter;
     private connectToDatabase = connectToDatabase;
     protected handleMessage = handleMessage;
     protected wsCommand = wsCommand;
@@ -53,6 +55,7 @@ export default class ContainerWorkspaces {
     protected wss: WebSocketServer;
     protected mainRouter: Router;
     protected agentRouter: Router;
+    protected containerRouter: Router;
     protected webSockerRouter;
     protected proxmoxClient: ProxmoxConnection;
     public mysqlConnection: Connection;
@@ -105,6 +108,7 @@ export default class ContainerWorkspaces {
 
         // Routers
         this.webApp.use('/api/agent', this.agentRouter);
+        this.webApp.use('/api/container', this.containerRouter);
         this.webApp.use('/api', this.mainRouter);
 
         this.httpServer.on('request', this.webApp);
@@ -160,6 +164,7 @@ export default class ContainerWorkspaces {
     }
 
     private initRouters(): void {
+        this.initContainerRouter();
         this.initMainRouter();
         this.initAgentRouter();
     }
@@ -281,5 +286,37 @@ export default class ContainerWorkspaces {
         const task: Task = new Task({ data, containerID });
         await this.sendTaskToAgent(task, agentIP);
         return true;
+    }
+
+    protected getContainerIP(): Handler {
+        return async (req, res, next) => {
+            if (isNaN(Number(req.params.containerID)))
+                return res.status(400).send({
+                    status: 'bad request',
+                    message: 'containerID must be a number',
+                });
+            const containerID: number = Number(req.params.containerID);
+            const agentIP: string = await this.proxmoxClient.getContainerIP(
+                containerID
+            );
+
+            const ipValid: boolean = await this.checkIP(agentIP);
+
+            if (!agentIP) {
+                res.status(404).send({
+                    status: 'not foud',
+                    message: 'Could not find container with such ID',
+                });
+            } else if (!ipValid) {
+                res.status(406).send({
+                    status: 'not acceptable',
+                    message:
+                        'Specified ID belongs to a container which is not managed by our services',
+                });
+            } else {
+                req.agentIP = agentIP;
+                next();
+            }
+        };
     }
 }
