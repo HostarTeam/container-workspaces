@@ -205,4 +205,21 @@ export function initMainRouter(this: ContainerWorkspaces): void {
             }
         }
     );
+
+    router.delete(
+        '/container/:containerID/',
+        async (req: Request, res: Response) => {
+            const containerID: number = Number(req.params.containerID);
+
+            const deleted: boolean = await this.proxmoxClient.deleteContainer(
+                containerID
+            );
+            if (deleted) res.send({ status: 'ok' });
+            else
+                res.status(409).send({
+                    status: 'conflict',
+                    message: 'could not delete container',
+                });
+        }
+    );
 }

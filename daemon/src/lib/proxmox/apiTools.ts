@@ -7,6 +7,7 @@ import {
     CTOptions,
     LXC,
     Node,
+    ProxmoxResponse,
     SQLNode,
     status,
 } from '../typing/types';
@@ -16,7 +17,7 @@ export function call(
     path: string,
     method: string,
     body: any = null
-): Promise<any> {
+): Promise<ProxmoxResponse> {
     let promise = new Promise(async (resolve, reject) => {
         let options = {
             headers: {
@@ -31,7 +32,7 @@ export function call(
         if (body) (options as any).body = JSON.stringify(body);
         try {
             var res: Response = await fetch(
-                `${this.basicURL}/${path}/`,
+                `${this.basicURL}/${path}`,
                 options
             );
             if (res.status == 401) {
@@ -83,9 +84,14 @@ export async function getAuthKeys(this: ProxmoxConnection): Promise<void> {
     }
 }
 
-export async function deleteCTContainer(this: ProxmoxConnection, id: number) {
+export async function deleteContainer(this: ProxmoxConnection, id: number) {
     const node: string = await this.getNodeOfContainer(id);
-    await this.call(`nodes/${node}/lxc/${id}?force=1`, 'DELETE');
+    const deletedRes = await this.call(
+        `nodes/${node}/lxc/${id}?force=1`,
+        'DELETE'
+    );
+
+    return !!deletedRes.data;
 }
 
 export async function createCTContainer(
@@ -222,7 +228,7 @@ export async function getContainerIP(
     let ctConfig = await this.call(`nodes/${nodename}/lxc/${id}/config`, 'GET');
     // net config for example "net0": "name=eth0,bridge=vmbr0,firewall=1,gw=195.133.95.1,hwaddr=2E:EA:FA:B4:21:47,ip=195.133.95.121/24,type=veth"
     const netConf = ctConfig.data.net0;
-    return netConf.split('ip=')[1].split('/')[0];
+    return netConf?.split('ip=')?.[1]?.split('/')?.[0] || null;
 }
 
 export async function getContainerInfo(

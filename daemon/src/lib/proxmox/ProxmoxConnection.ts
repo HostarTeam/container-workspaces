@@ -15,6 +15,7 @@ import {
     getContainerInfo,
     getContainerStatus,
     changeContainerStatus,
+    deleteContainer,
 } from './apiTools';
 import { Logger } from 'log4js';
 
@@ -46,6 +47,7 @@ export default class ProxmoxConnection {
     public getContainerInfo = getContainerInfo;
     public getContainerStatus = getContainerStatus;
     public changeContainerStatus = changeContainerStatus;
+    public deleteContainer = deleteContainer;
 
     constructor({
         hostname,

@@ -181,6 +181,11 @@ export interface ContainerStatus {
     vmid: number; // Represents the container id.
 }
 
+export interface ProxmoxResponse {
+    data?: any;
+    [key: string]: any;
+}
+
 export type status =
     | 'start'
     | 'stop'
