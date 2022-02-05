@@ -85,9 +85,17 @@ export function initMainRouter(this: ContainerWorkspaces): void {
      */
     router.post(
         '/container/:containerID/exec',
+        requireBodyProps('commands'),
         async (req: Request, res: Response) => {
             const containerID: number = Number(req.params.containerID);
-            const data: MessageData = { ...req.body.data };
+            const commands: string[] = req.body.commands;
+            const data: MessageData = {
+                action: 'shell_exec',
+                args: {
+                    commands,
+                },
+            };
+
             const agentIP: string = req.agentIP;
 
             const task: Task = new Task({ data, containerID });
@@ -183,6 +191,7 @@ export function initMainRouter(this: ContainerWorkspaces): void {
      */
     router.put(
         '/container/:containerID/changepassword',
+        requireBodyProps('password'),
         async (req: Request, res: Response) => {
             const containerID: number = Number(req.params.containerID);
             const agentIP: string = req.agentIP;

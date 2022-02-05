@@ -16,7 +16,9 @@ export function handleMessage(
         const messageJSON = JSON.parse(message.toString());
         const messageData = new MessageDataResponse(messageJSON);
         this.wsLogger.info(
-            `${req.socket.remoteAddress} - ${messageData.action} - ${messageData.method}`
+            `${req.socket.remoteAddress} - ${messageData.action}${
+                messageData.method && ` - ${messageData.method}`
+            }`
         );
         this.wsCommand(req, messageData, socket);
     } catch (err: unknown) {
