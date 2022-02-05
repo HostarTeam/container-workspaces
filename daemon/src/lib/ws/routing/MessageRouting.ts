@@ -24,10 +24,11 @@ export default class MessageRouting {
                 `Error in agent with id ${task.containerID} in task ${task.id} - ${messageData.args.errorReport.message}`
             );
         } else {
-            // cw.updateTask(messageData);
             cw.wsLogger.info(
                 `Succeded agent with id ${task.containerID} in task ${task.id} - ${messageData.args.status}`
             );
+
+            cw.finishTask(task.id);
         }
     }
 
@@ -49,10 +50,34 @@ export default class MessageRouting {
             );
         } else {
             cw.logLines.set(task.id, messageData.args.lines);
-            // cw.updateTask(messageData);
             cw.wsLogger.info(
                 `Succeded agent with id ${task.containerID} in task ${task.id} - ${messageData.args.status}`
             );
+            cw.finishTask(task.id);
+        }
+    }
+
+    public static async change_password(
+        cw: ContainerWorkspaces,
+        req: IncomingMessage,
+        messageData: MessageDataResponse,
+        socket: WebSocket
+    ): Promise<void> {
+        const task: Task = await cw.getTask(messageData.taskid);
+        if (!task) return;
+        if (
+            messageData.args?.status === 'error' &&
+            messageData.args?.errorReport
+        ) {
+            cw.errorTask(task.id, <Error>messageData.args.errorReport);
+            cw.wsLogger.error(
+                `Error in agent with id ${task.containerID} in task ${task.id} - ${messageData.args.errorReport.message}`
+            );
+        } else {
+            cw.wsLogger.info(
+                `Succeded agent with id ${task.containerID} in task ${task.id} - ${messageData.args.status}`
+            );
+            cw.finishTask(task.id);
         }
     }
 }

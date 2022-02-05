@@ -5,13 +5,16 @@ export interface AgentConfiguration {
     socketServer: string;
 }
 
-export interface CommandErrorReport {
+export interface ErrorReport {
+    message: string;
+    stack: string;
+}
+
+export interface CommandErrorReport extends ErrorReport {
     command: string;
     stderr: string;
     stdout: string;
     exitCode: number;
-    stack: string;
-    message: string;
 }
 
 export type MessageRoutingHandler = MessageRouting[keyof MessageRouting];

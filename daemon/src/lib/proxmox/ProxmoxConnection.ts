@@ -11,7 +11,7 @@ import {
     getFirstFineNode,
     checkIfNodeIsFine,
     getContainerIP,
-    checkIfCotainerIDExists,
+    getNodeOfContainer,
     getContainerInfo,
     getContainerStatus,
     changeContainerStatus,
@@ -42,7 +42,7 @@ export default class ProxmoxConnection {
     protected getFirstFineNode = getFirstFineNode;
     protected checkIfNodeIsFine = checkIfNodeIsFine;
     public getContainerIP = getContainerIP;
-    public checkIfCotainerIDExists = checkIfCotainerIDExists;
+    public getNodeOfContainer = getNodeOfContainer;
     public getContainerInfo = getContainerInfo;
     public getContainerStatus = getContainerStatus;
     public changeContainerStatus = changeContainerStatus;

@@ -13,11 +13,10 @@ config();
 async function main(): Promise<void> {
     const config: AgentConfiguration = await readConfFile();
     const initHadRan: boolean = await checkIfInitHadRan();
-    const isDevelopment: boolean = process.env.DEVELOPMENT === '1';
 
     if (!initHadRan) {
         try {
-            const initAgent = new InitAgent(config, isDevelopment);
+            const initAgent = new InitAgent(config);
             await initAgent.runInit();
         } catch (err: unknown) {
             printError(<String>err);
@@ -25,7 +24,7 @@ async function main(): Promise<void> {
         }
     }
 
-    const agent = new Agent(config);
+    new Agent(config);
 }
 
 main();

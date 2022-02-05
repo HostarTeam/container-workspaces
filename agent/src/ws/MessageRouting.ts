@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 import Agent from '../Agent';
-import { CommandErrorReport } from '../lib/typing/types';
+import { CommandErrorReport, ErrorReport } from '../lib/typing/types';
 import { MessageDataResponse } from '../lib/typing/MessageData';
 import { Task } from '../lib/typing/Task';
 import { getLastLines } from '../lib/utils';
@@ -18,7 +18,7 @@ export default class MessageRouting {
 
                 agent.logger.info(`Executed command ${command}`);
 
-                const commandSuccess: MessageDataResponse =
+                const clientCommand: MessageDataResponse =
                     new MessageDataResponse({
                         taskid: task.id,
                         action: 'shell_exec',
@@ -27,7 +27,7 @@ export default class MessageRouting {
                         },
                     });
 
-                agent.ws.send(JSON.stringify(commandSuccess));
+                agent.sendData(clientCommand);
             } catch (err: any) {
                 const errorReport: CommandErrorReport = {
                     command,
@@ -51,7 +51,7 @@ export default class MessageRouting {
                         args: { status: 'error', errorReport },
                     });
 
-                agent.ws.send(JSON.stringify(clientCommand));
+                agent.sendData(clientCommand);
             }
         }
     }
@@ -69,7 +69,7 @@ export default class MessageRouting {
                 args: { status: 'success', lines },
             });
 
-            agent.ws.send(JSON.stringify(clientCommand));
+            agent.sendData(clientCommand);
         } catch (err) {
             agent.logger.error(
                 `Failed to read ${task.data.args.linesCount} lines of log file`
@@ -81,7 +81,36 @@ export default class MessageRouting {
                 args: { status: 'error', lines: null },
             });
 
-            agent.ws.send(JSON.stringify(clientCommand));
+            agent.sendData(clientCommand);
+        }
+    }
+
+    public static async change_password(agent: Agent, task: Task) {
+        const password = task.data.args.password;
+
+        try {
+            await agent.changePassword(password);
+
+            const clientCommand: MessageDataResponse = new MessageDataResponse({
+                taskid: task.id,
+                action: 'change_password',
+                args: { status: 'success' },
+            });
+
+            agent.sendData(clientCommand);
+        } catch (err) {
+            const errorReport: ErrorReport = {
+                message: err.message,
+                stack: err.stack,
+            };
+
+            const clientCommand: MessageDataResponse = new MessageDataResponse({
+                taskid: task.id,
+                action: 'change_password',
+                args: { status: 'error', errorReport },
+            });
+
+            agent.sendData(clientCommand);
         }
     }
 }

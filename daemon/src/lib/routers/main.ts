@@ -173,4 +173,36 @@ export function initMainRouter(this: ContainerWorkspaces): void {
             }
         }
     );
+
+    router.put(
+        '/container/:containerID/changepassword',
+        async (req: Request, res: Response) => {
+            const containerID: number = Number(req.params.containerID);
+            const agentIP: string = req.agentIP;
+
+            const connectedAgent = this.getConnectedClient(agentIP);
+
+            if (!connectedAgent) {
+                res.status(409).send({
+                    status: 'conflict',
+                    message:
+                        'Container with given ID is not connected to this server',
+                });
+            } else {
+                const newPassword = req.body.password;
+
+                // Not necessarily executed successfully
+                const sentSuccessfully = await this.changeContainerPassword(
+                    containerID,
+                    newPassword
+                );
+                if (sentSuccessfully) res.send({ status: 'ok' });
+                else
+                    res.status(409).send({
+                        status: 'conflict',
+                        message: 'could not change password',
+                    });
+            }
+        }
+    );
 }

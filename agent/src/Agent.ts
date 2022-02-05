@@ -5,6 +5,7 @@ import log4js, { Logger } from 'log4js';
 import { handleMessage } from './ws/handleMessage';
 import { wsCommand } from './ws/wsCommand';
 import { Task } from './lib/typing/Task';
+import passwd from 'passwd-linux';
 
 export default class Agent {
     public ws: WebSocket;
@@ -57,6 +58,10 @@ export default class Agent {
         ); // Wait 10 seconds before reconnecting
     }
 
+    public sendData(data: any): void {
+        this.ws.send(JSON.stringify(data));
+    }
+
     private configureLogger(location: string = '/var/log/cw/agent.log'): void {
         this.logger = log4js
             .configure({
@@ -70,5 +75,19 @@ export default class Agent {
             })
             .getLogger();
         this.logFilePath = location;
+    }
+
+    public changePassword(newPassword: string): void {
+        passwd.changePassword(
+            'root',
+            newPassword,
+            (err: unknown, response): void => {
+                if (err) {
+                    this.logger.error(`Error changing password: ${<Error>err}`);
+                    throw err;
+                } else if (response) this.logger.info('Password changed');
+                else this.logger.error('Could not change password');
+            }
+        );
     }
 }

@@ -168,7 +168,7 @@ export default class ContainerWorkspaces {
         const sql: string = `INSERT INTO tasks (id, start_time, data, containerID) VALUES (?, ?, ?, ?)`;
         await this.mysqlConnection.query(sql, [
             task.id,
-            task.start_time.getTime(),
+            task.start_time,
             JSON.stringify(task.data),
             task.containerID,
         ]);
@@ -186,12 +186,13 @@ export default class ContainerWorkspaces {
     public async updateTask(task: Task): Promise<Task> {
         const sql: string = `UPDATE tasks SET start_time = ?, end_time = ?, data = ?, status = ?, error = ?, containerID = ? WHERE id = ?`;
         await this.mysqlConnection.query(sql, [
-            task.start_time.getTime(),
-            task.end_time.getTime(),
+            task.start_time,
+            task.end_time,
             JSON.stringify(task.data),
             task.status,
             task.error,
             task.containerID,
+            task.id,
         ]);
 
         return task;
@@ -203,6 +204,14 @@ export default class ContainerWorkspaces {
         erroredTask.error = error.message;
 
         await this.updateTask(erroredTask);
+    }
+
+    public async finishTask(taskid: Task['id']): Promise<void> {
+        const finishedTask = new Task(await this.getTask(taskid));
+        finishedTask.status = 'OK';
+        finishedTask.end_time = Date.now();
+
+        await this.updateTask(finishedTask);
     }
 
     public async triggerStatusChange(
@@ -234,14 +243,10 @@ export default class ContainerWorkspaces {
         await this.sendTaskToAgent(task, ip);
 
         // God please forgive us for this sin we're about to commit
-        console.time('for');
         for (let i = 0; i < 10; i++) {
             await sleep(20);
             const lines = this.logLines.get(task.id);
-            if (lines) {
-                console.timeEnd('for');
-                return lines;
-            }
+            if (lines) return lines;
         }
 
         return null;
@@ -254,5 +259,27 @@ export default class ContainerWorkspaces {
         );
 
         return selectedClient;
+    }
+
+    protected async changeContainerPassword(
+        containerID: number,
+        newPassword: string
+    ): Promise<boolean> {
+        const agentIP = await this.proxmoxClient.getContainerIP(containerID);
+        if (!agentIP) return false;
+
+        const connection = this.getConnectedClient(agentIP);
+        if (!connection) return false;
+
+        const data: MessageData = {
+            action: 'change_password',
+            args: {
+                password: newPassword,
+            },
+        };
+
+        const task: Task = new Task({ data, containerID });
+        await this.sendTaskToAgent(task, agentIP);
+        return true;
     }
 }
