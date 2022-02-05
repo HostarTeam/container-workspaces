@@ -193,3 +193,11 @@ export type status =
     | 'suspend'
     | 'resume'
     | 'reboot';
+
+export interface SQLIP {
+    id: number;
+    ipv4: string;
+    gateway: string;
+    netmask: string;
+    used: 0 | 1;
+}

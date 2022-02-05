@@ -1,6 +1,6 @@
 import fetch, { Response } from 'node-fetch';
 import ProxmoxConnection from './ProxmoxConnection';
-import { generatePassword, printError } from '../utils';
+import { generatePassword, netmaskToCIDR, printError } from '../utils';
 import {
     ClusterNode,
     ContainerStatus,
@@ -8,6 +8,7 @@ import {
     LXC,
     Node,
     ProxmoxResponse,
+    SQLIP,
     SQLNode,
     status,
 } from '../typing/types';
@@ -84,21 +85,72 @@ export async function getAuthKeys(this: ProxmoxConnection): Promise<void> {
     }
 }
 
-export async function deleteContainer(this: ProxmoxConnection, id: number) {
-    const node: string = await this.getNodeOfContainer(id);
-    const deletedRes = await this.call(
-        `nodes/${node}/lxc/${id}?force=1`,
-        'DELETE'
-    );
-
-    return !!deletedRes.data;
+export async function deleteContainerFromDB(
+    this: ProxmoxConnection,
+    id: number
+): Promise<boolean> {
+    const sql = 'DELETE FROM cts WHERE id = ?';
+    const result = (await this.mysqlConnection.query(sql, [id]))[0][0];
+    return !!result;
 }
 
-export async function createCTContainer(
+export async function deleteContainer(
+    this: ProxmoxConnection,
+    id: number,
+    ipv4: string
+): Promise<boolean> {
+    try {
+        const node: string = await this.getNodeOfContainer(id);
+        const deletedRes = await this.call(
+            `nodes/${node}/lxc/${id}?force=1`,
+            'DELETE'
+        );
+        const ip: SQLIP = await this.getIP(ipv4);
+        await this.updateIPUsedStatus(ip, false);
+        await this.deleteContainerFromDB(id);
+
+        return !!deletedRes.data;
+    } catch (error) {
+        this.pveLogger.error(`Can't delete container ${id} - ${error.message}`);
+        return false;
+    }
+}
+
+export async function getFreeIP(
+    this: ProxmoxConnection
+): Promise<SQLIP | null> {
+    const sql: string = `SELECT * FROM ips WHERE used = 0 LIMIT 1`;
+    const result: SQLIP | null = (await this.mysqlConnection.query(sql))[0][0];
+    if (!result) return null;
+    return result;
+}
+
+export async function getIP(
+    this: ProxmoxConnection,
+    ipv4: string
+): Promise<SQLIP | null> {
+    const sql: string = `SELECT * FROM ips WHERE ipv4 = ?`;
+    const result: SQLIP | null = (
+        await this.mysqlConnection.query(sql, [ipv4])
+    )[0][0];
+    if (!result) return null;
+    return result;
+}
+
+export async function updateIPUsedStatus(
+    this: ProxmoxConnection,
+    ip: SQLIP,
+    status: boolean
+): Promise<void> {
+    const sql: string = `UPDATE ips SET used = ? WHERE ipv4 = ?`;
+    await this.mysqlConnection.query(sql, [Number(status), ip.ipv4]);
+}
+
+export async function createContainer(
     this: ProxmoxConnection,
     location: string,
     template: string
-): Promise<void> {
+): Promise<boolean> {
     const sql = `SELECT * FROM config`;
     const config = JSON.parse(
         (await this.mysqlConnection.query(sql))[0][0]['config']
@@ -106,17 +158,22 @@ export async function createCTContainer(
 
     const node = await this.getNodeByLocation(location);
     const ctOptions = config['ct_options'];
-    await this.createCTContainerInProxmox(ctOptions, node, template);
+    const ip = await this.getFreeIP();
+    if (!ip) return false;
+    await this.updateIPUsedStatus(ip, true);
+    return await this.createContainerInProxmox(ctOptions, node, template, ip);
 }
 
-export async function createCTContainerInProxmox(
+export async function createContainerInProxmox(
     this: ProxmoxConnection,
     options: CTOptions,
     node: string,
-    template: string
-): Promise<void> {
+    template: string,
+    ip: SQLIP
+): Promise<boolean> {
     try {
-        const nextID: number = await this.call('cluster/nextid', 'GET')['data'];
+        const nextIDRes = await this.call('cluster/nextid', 'GET');
+        const nextID = nextIDRes.data;
         if (!nextID) {
             this.pveLogger.error(`Couldn't find LXC container ID`);
             throw Error(`Couldn't find LXC container ID`);
@@ -133,22 +190,41 @@ export async function createCTContainerInProxmox(
             rootfs: `local-lvm:${options.ct_disk}`,
             memory: options.ct_ram,
             swap: options.ct_swap,
+            net0: `name=eth0,bridge=vmbr0,firewall=1,gw=${ip.gateway},ip=${
+                ip.ipv4
+            }/${netmaskToCIDR(ip.netmask)},type=veth`,
+            start: true,
         };
         const res = await this.call(`nodes/${node}/lxc`, 'POST', body);
-        if (res.data && !res.errors)
+        if (res.data && !res.errors) {
             this.pveLogger.info(
                 `LXC container with ID ${nextID} has been created successfully`
             );
-        else
+            await this.addCotainerToDatabase(nextID, ip.ipv4, node);
+            return true;
+        } else
             this.pveLogger.error(
                 `LXC container could not be created - ${res.errors
                     .getValues()
                     .join(' - ')}`
             );
+
         console.log(`LXC container with message\n`, res);
     } catch (err) {
         this.pveLogger.error('Could not create a LXC container');
     }
+    return false;
+}
+
+export async function addCotainerToDatabase(
+    this: ProxmoxConnection,
+    id: number,
+    ipv4: string,
+    node: string
+): Promise<boolean> {
+    const sql = `INSERT INTO cts (id, ipv4) VALUES (?, ?)`;
+    const res = await this.mysqlConnection.query(sql, [id, ipv4]);
+    return !!res;
 }
 
 export async function getNodeIP(

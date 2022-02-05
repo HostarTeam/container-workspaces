@@ -21,6 +21,7 @@ export function initMainRouter(this: ContainerWorkspaces): void {
     router.all(
         '/container/:containerID*',
         async (req: Request, res: Response, next: NextFunction) => {
+            if (isNaN(Number(req.params.containerID))) return next();
             const containerID: number = Number(req.params.containerID);
             const agentIP: string = await this.proxmoxClient.getContainerIP(
                 containerID
@@ -174,6 +175,11 @@ export function initMainRouter(this: ContainerWorkspaces): void {
         }
     );
 
+    /**
+     * @param {string} containerID
+     * @param {string} password The new password of the container in req.body.
+     * This route is used in order to change the password of a container.
+     */
     router.put(
         '/container/:containerID/changepassword',
         async (req: Request, res: Response) => {
@@ -206,13 +212,18 @@ export function initMainRouter(this: ContainerWorkspaces): void {
         }
     );
 
+    /**
+     * @param {string} containerID
+     * This route is used in order to delete a container.
+     */
     router.delete(
         '/container/:containerID/',
         async (req: Request, res: Response) => {
             const containerID: number = Number(req.params.containerID);
 
             const deleted: boolean = await this.proxmoxClient.deleteContainer(
-                containerID
+                containerID,
+                req.agentIP
             );
             if (deleted) res.send({ status: 'ok' });
             else
@@ -222,4 +233,26 @@ export function initMainRouter(this: ContainerWorkspaces): void {
                 });
         }
     );
+
+    /**
+     * @param {string} containerID
+     * @param {string} location The location of the container in req.body.
+     * @param {string} template The template of the container in req.body.
+     * Thie route is used in order to create a container.
+     */
+    router.post('/container/create', async (req: Request, res: Response) => {
+        const location = String(req.body.location);
+        const template = String(req.body.template);
+        const created = await this.proxmoxClient.createContainer(
+            location,
+            template
+        );
+
+        if (created) res.send({ status: 'ok' });
+        else
+            res.status(409).send({
+                status: 'conflict',
+                message: 'could not create container',
+            });
+    });
 }

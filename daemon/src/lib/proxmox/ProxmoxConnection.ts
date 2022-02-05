@@ -2,8 +2,8 @@ import { httpProtocol } from '../typing/types';
 import { getNodesName, printSuccess } from '../utils';
 import {
     call,
-    createCTContainer,
-    createCTContainerInProxmox,
+    createContainer,
+    createContainerInProxmox,
     getAuthKeys,
     getNodeByLocation,
     getNodeIP,
@@ -16,6 +16,11 @@ import {
     getContainerStatus,
     changeContainerStatus,
     deleteContainer,
+    getFreeIP,
+    updateIPUsedStatus,
+    addCotainerToDatabase,
+    getIP,
+    deleteContainerFromDB,
 } from './apiTools';
 import { Logger } from 'log4js';
 
@@ -36,12 +41,17 @@ export default class ProxmoxConnection {
         call;
     public getNodes = getNodes;
     public getNodesName = getNodesName;
-    public createCTContainer = createCTContainer;
+    public createContainer = createContainer;
     public getNodeIP = getNodeIP;
     public getNodeByLocation = getNodeByLocation;
-    protected createCTContainerInProxmox = createCTContainerInProxmox;
+    protected createContainerInProxmox = createContainerInProxmox;
     protected getFirstFineNode = getFirstFineNode;
     protected checkIfNodeIsFine = checkIfNodeIsFine;
+    protected getFreeIP = getFreeIP;
+    protected updateIPUsedStatus = updateIPUsedStatus;
+    protected addCotainerToDatabase = addCotainerToDatabase;
+    protected getIP = getIP;
+    protected deleteContainerFromDB = deleteContainerFromDB;
     public getContainerIP = getContainerIP;
     public getNodeOfContainer = getNodeOfContainer;
     public getContainerInfo = getContainerInfo;
