@@ -160,6 +160,11 @@ export default class ContainerWorkspaces {
                     request.socket.remoteAddress
                 );
 
+                const connected = this.getConnectedClient(
+                    request.socket.remoteAddress
+                );
+                if (connected) socket.close();
+
                 if (isAuthorized) this.wss.emit('connection', socket, request);
                 else socket.close();
             });
