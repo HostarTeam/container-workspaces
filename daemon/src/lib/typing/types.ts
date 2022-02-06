@@ -3,8 +3,11 @@ import { CTOptions } from './options';
 
 export interface Configuration {
     apiKey: string;
-    address: string;
-    port: number;
+    listenAddress: string;
+    listenPort: number;
+    remoteAddress: string;
+    remotePort: number;
+    protocol: 'http' | 'https';
 }
 
 export type httpProtocol = 'http' | 'https';

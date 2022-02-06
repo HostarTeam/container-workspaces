@@ -22,7 +22,7 @@ export function initAgentRouter(this: ContainerWorkspaces): void {
         res.send(initCommands);
     });
 
-    router.post('/command/reporterror', (req: Request, res: Response) => {
+    router.post('/reporterror', (req: Request, res: Response) => {
         const { command, stderr, stdout, exitCode, message }: CommandError =
             req.body;
         if (!command)
@@ -38,5 +38,22 @@ export function initAgentRouter(this: ContainerWorkspaces): void {
             `Error report - ${command} - ${message} - Exit code: ${exitCode} - Stdout: ${stdout} - Stderr: ${stderr}`
         );
         res.send({ status: 'ok', message: 'report received' });
+    });
+
+    router.patch('/inithostname', async (req: Request, res: Response) => {
+        const agentIP = req.ip;
+        const containerID = await this.getContainerID(agentIP);
+        if (!containerID)
+            return res.status(403).send({
+                status: 'forbidden',
+                message: 'Your IP is not allowed',
+                hostname: null,
+            });
+
+        await this.proxmoxClient.changeCTHostname(
+            containerID,
+            containerID.toString()
+        );
+        res.send({ hostname: containerID.toString(), status: 'ok' });
     });
 }

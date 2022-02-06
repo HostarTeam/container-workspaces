@@ -1,6 +1,7 @@
-import { readFileSync } from 'fs';
+import { existsSync, fstat, mkdirSync, readFileSync } from 'fs';
 import { AgentConfiguration } from './typing/types';
 import { execSync } from 'child_process';
+import os from 'os';
 
 export function generatePassword(length: number): string {
     var result: string = '';
@@ -19,12 +20,17 @@ export async function checkIfInitHadRan(
     location = '/var/local/cw/initran'
 ): Promise<boolean> {
     try {
-        const fileContent: string = await readFileSync(location, 'utf8');
-        const initHadRan: boolean = fileContent.trim() === '1';
-
-        return initHadRan;
+        if (existsSync(location)) {
+            const fileContent: string = readFileSync(location, 'utf8');
+            const initHadRan: boolean = fileContent.trim() === '1';
+            return initHadRan;
+        } else {
+            const dirPath = location.split('/').slice(0, -1).join('/');
+            mkdirSync(dirPath, { recursive: true });
+            return false;
+        }
     } catch {
-        printError('An error has occured checking password changement');
+        printError('Failed to check if init agent had ran');
     }
 }
 
@@ -53,6 +59,24 @@ export function getLastLines(logFilePath: string, lines: number = 100): string {
     });
 
     return stdout;
+}
+
+export function getInfoFromHostname(): {
+    protocol: string;
+    address: string;
+    port: number;
+} {
+    const hostname: string = os.hostname();
+    const protocol = hostname.split('-')[0];
+    const address = hostname.split('-')[1];
+    const port = Number(hostname.split('-')[2]);
+    return { protocol, address, port };
+}
+
+export function changeSystemHostname(newHostname: string): void {
+    execSync(`hostname ${newHostname}`, {
+        stdio: 'pipe',
+    });
 }
 
 enum Colors {

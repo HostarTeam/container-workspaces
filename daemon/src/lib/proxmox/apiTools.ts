@@ -291,7 +291,7 @@ export async function createContainerInProxmox(
 ): Promise<ActionResult> {
     try {
         const nextIDRes = await this.call('cluster/nextid', 'GET');
-        const nextID = nextIDRes.data;
+        const nextID: string = nextIDRes.data;
         if (!nextID) {
             this.pveLogger.error(`Couldn't find LXC container ID`);
             return { error: `Couldn't find LXC container ID`, ok: false };
@@ -299,10 +299,10 @@ export async function createContainerInProxmox(
 
         const body: LXC = {
             ostemplate: template, // template for example: 'local:vztmpl/debian-9.0-amd64-standard_9.0-3_amd64.tar.gz'
-            vmid: nextID,
+            vmid: Number(nextID),
             cores: options.ct_cores,
             description: 'Created by the API',
-            hostname: nextID.toString(),
+            hostname: nextID,
             password,
             rootfs: `local-lvm:${options.ct_disk}`,
             memory: options.ct_ram,
@@ -317,7 +317,7 @@ export async function createContainerInProxmox(
             this.pveLogger.info(
                 `LXC container with ID ${nextID} has been created successfully`
             );
-            await this.addCotainerToDatabase(nextID, ip.ipv4, node);
+            await this.addCotainerToDatabase(Number(nextID), ip.ipv4, node);
             return { error: null, ok: true };
         }
         this.pveLogger.error(
@@ -460,4 +460,15 @@ export async function changeContainerStatus(
         'POST'
     );
     return ctConfig.data;
+}
+
+export async function changeCTHostname(
+    this: ProxmoxConnection,
+    id: number,
+    hostname: string
+): Promise<void> {
+    const node = await this.getNodeOfContainer(id);
+    await this.call(`nodes/${node}/lxc/${id}/config`, 'PUT', {
+        hostname,
+    });
 }

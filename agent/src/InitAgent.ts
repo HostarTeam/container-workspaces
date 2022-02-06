@@ -1,15 +1,37 @@
 import { AgentConfiguration, CommandErrorReport } from './lib/typing/types';
 import { execSync } from 'child_process';
-import { writeFileSync } from 'fs';
+import { mkdirSync, writeFileSync } from 'fs';
 import fetch, { Response } from 'node-fetch';
 import log4js, { Logger } from 'log4js';
+import { changeSystemHostname, getInfoFromHostname } from './lib/utils';
 
 export default class InitAgent {
+    private readonly address: string;
+    private readonly protocol: string;
+    private readonly port: number;
     protected logger: Logger;
+    protected config: AgentConfiguration;
 
-    constructor(protected config: AgentConfiguration) {
+    constructor() {
+        const { protocol, address, port } = getInfoFromHostname();
+        this.protocol = protocol;
+        this.address = address;
+        this.port = port;
+
+        this.config = {
+            apiServer: `${this.protocol}://${this.address}:${this.port}`,
+            socketServer: `ws://${this.address}:${this.port}`,
+        };
+        this.writeConfig();
         this.configureLogger();
         this.logger.info('Running init agent');
+    }
+
+    private writeConfig(location: string = '/etc/cw/defaultconf.json'): void {
+        mkdirSync(location.split('/').slice(0, -1).join('/'), {
+            recursive: true,
+        });
+        writeFileSync(location, JSON.stringify(this.config));
     }
 
     public async runInit(): Promise<void> {
@@ -20,6 +42,8 @@ export default class InitAgent {
 
         await this.runInitCommands(initCommands, this.config.apiServer);
         this.logger.info('Executed init commands');
+
+        await this.initHostname();
 
         await this.setAsRan();
     }
@@ -37,7 +61,7 @@ export default class InitAgent {
     ): Promise<void | never> {
         for (const command of commands) {
             try {
-                await execSync(command, {
+                execSync(command, {
                     stdio: 'pipe',
                 });
             } catch (err: unknown) {
@@ -60,7 +84,7 @@ export default class InitAgent {
             stack: errorData.stack,
             message: errorData.message,
         };
-        await fetch(`${apiServer}/api/agent/command/reporterror`, {
+        await fetch(`${apiServer}/api/agent/reporterror`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'Application/JSON',
@@ -70,7 +94,7 @@ export default class InitAgent {
     }
 
     private async setAsRan(location = '/var/local/cw/initran'): Promise<void> {
-        await writeFileSync(location, '1');
+        writeFileSync(location, '1');
     }
 
     private configureLogger(
@@ -87,5 +111,16 @@ export default class InitAgent {
                 categories: { default: { appenders: ['init'], level: 'all' } },
             })
             .getLogger();
+    }
+
+    private async initHostname(): Promise<void> {
+        const res = await fetch(
+            `${this.config.apiServer}/api/agent/inithostname`
+        );
+        const data: { status: 'ok' | 'forbidden'; hostname: string } =
+            await res.json();
+
+        if (data.status === 'ok') changeSystemHostname(data.hostname);
+        else this.logger.error('Could not set hostname');
     }
 }

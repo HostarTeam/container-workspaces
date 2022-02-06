@@ -11,12 +11,11 @@ import { config } from 'dotenv';
 config();
 
 async function main(): Promise<void> {
-    const config: AgentConfiguration = await readConfFile();
     const initHadRan: boolean = await checkIfInitHadRan();
 
     if (!initHadRan) {
         try {
-            const initAgent = new InitAgent(config);
+            const initAgent = new InitAgent();
             await initAgent.runInit();
         } catch (err: unknown) {
             printError(<String>err);
@@ -24,6 +23,7 @@ async function main(): Promise<void> {
         }
     }
 
+    const config: AgentConfiguration = await readConfFile();
     new Agent(config);
 }
 

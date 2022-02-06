@@ -7,6 +7,7 @@ import {
     addNodeToDatabase,
     call,
     changeContainerStatus,
+    changeCTHostname,
     checkIfNodeIsFine,
     createContainer,
     createContainerInProxmox,
@@ -76,6 +77,7 @@ export default class ProxmoxConnection {
     public getIPs = getIPs;
     public addIPToDatabase = addIPToDatabase;
     public removeIPFromDatabase = removeIPFromDatabase;
+    public changeCTHostname = changeCTHostname;
 
     constructor({
         hostname,

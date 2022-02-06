@@ -26,7 +26,7 @@ import { wsCommand } from './lib/ws/routing/wsCommand';
 import { sendTaskToAgent } from './lib/ws/commandAgent';
 import { Task } from './lib/typing/Task';
 import { Connection } from 'mysql2/promise';
-import { Config, status } from './lib/typing/types';
+import { Config, status, Configuration, CT } from './lib/typing/types';
 import { MessageData } from './lib/typing/MessageData';
 import { initConfigRouter } from './lib/routers/config';
 import { CTOptions } from './lib/typing/options';
@@ -34,8 +34,11 @@ import { CTOptions } from './lib/typing/options';
 export default class ContainerWorkspaces {
     private httpServer: Server;
     private apiKey: string;
-    private address: string;
-    private port: number;
+    private listenAddress: string;
+    private listenPort: number;
+    protected remoteAddress: string;
+    protected remotePort: number;
+    protected protocol: Configuration['protocol'];
 
     private log4js: Log4js;
     public mainLogger: Logger;
@@ -64,10 +67,20 @@ export default class ContainerWorkspaces {
     protected proxmoxClient: ProxmoxConnection;
     public mysqlConnection: Connection;
 
-    constructor({ apiKey, address, port }) {
+    constructor({
+        apiKey,
+        listenAddress,
+        listenPort,
+        remoteAddress,
+        remotePort,
+        protocol,
+    }: Configuration) {
         this.apiKey = apiKey;
-        this.address = address;
-        this.port = port;
+        this.listenAddress = listenAddress;
+        this.listenPort = listenPort;
+        this.remoteAddress = remoteAddress;
+        this.remotePort = remotePort;
+        this.protocol = protocol;
         this.configureLoggers();
 
         this.webApp = express();
@@ -152,8 +165,10 @@ export default class ContainerWorkspaces {
             });
         });
 
-        this.httpServer.listen(this.port, this.address, () => {
-            printSuccess(`App is running on ${this.address}:${this.port}`);
+        this.httpServer.listen(this.listenPort, this.listenAddress, () => {
+            printSuccess(
+                `App is running on ${this.listenAddress}:${this.listenPort} - ${this.protocol}://${this.remoteAddress}:${this.remotePort}`
+            );
         });
     }
 
@@ -360,5 +375,12 @@ export default class ContainerWorkspaces {
         config['init_commands'] = commands;
 
         await this.updateConfig(config);
+    }
+
+    protected async getContainerID(ip: string): Promise<number | null> {
+        const sql: string = `SELECT id FROM cts WHERE ipv4 = ?`;
+        const result: CT = (await this.mysqlConnection.query(sql, [ip]))[0][0];
+        if (!result) return null;
+        return result.id;
     }
 }
