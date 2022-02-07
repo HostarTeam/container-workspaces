@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "target": "ES6",
+        "rootDir": "src/",
+        "outDir": "dist/",
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "resolveJsonModule": true,
+        "allowSyntheticDefaultImports": true,
+        "importsNotUsedAsValues": "remove",
+        "removeComments": true
+    }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "installscript",
+  "version": "1.0.0",
+  "description": "Install script for container workspaces",
+  "main": "dist/app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HostarTeam/container-workspaces.git"
+  },
+  "author": "Uri Bar Ilan (@ubarilan)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/HostarTeam/container-workspaces/issues"
+  },
+  "homepage": "https://github.com/HostarTeam/container-workspaces#readme",
+  "devDependencies": {
+    "@types/node": "^17.0.16"
+  }
+}
