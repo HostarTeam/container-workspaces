@@ -89,7 +89,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      * @param {string} containerID
      * This route is used in order to start a container.
      */
-    router.post(
+    router.patch(
         '/:containerID/start',
         this.getContainerIP(),
         async (req: Request, res: Response) => {
@@ -101,7 +101,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      * @param {string} containerID
      * This route is used in order to stop a container.
      */
-    router.post(
+    router.patch(
         '/:containerID/stop',
         this.getContainerIP(),
         async (req: Request, res: Response) => {
@@ -113,7 +113,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      * @param {string} containerID
      * This route is used in order to restart a container.
      */
-    router.post(
+    router.patch(
         '/:containerID/restart',
         this.getContainerIP(),
         async (req: Request, res: Response) => {
@@ -225,7 +225,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      * Thie route is used in order to create a container.
      */
     router.post(
-        '/create',
+        '/',
         requireBodyProps('location', 'template', 'password'),
         async (req: Request, res: Response) => {
             const location = String(req.body.location);

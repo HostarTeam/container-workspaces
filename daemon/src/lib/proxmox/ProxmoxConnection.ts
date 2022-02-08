@@ -31,6 +31,7 @@ import {
     getSQLNodes,
     removeIPFromDatabase,
     removeNodeFromDatabase,
+    setCTAsReady,
     updateIPUsedStatus,
 } from './apiTools';
 
@@ -78,6 +79,7 @@ export default class ProxmoxConnection {
     public addIPToDatabase = addIPToDatabase;
     public removeIPFromDatabase = removeIPFromDatabase;
     public changeCTHostname = changeCTHostname;
+    public setCTAsReady = setCTAsReady;
 
     constructor({
         hostname,

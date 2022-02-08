@@ -472,3 +472,11 @@ export async function changeCTHostname(
         hostname,
     });
 }
+
+export async function setCTAsReady(
+    this: ProxmoxConnection,
+    id: number
+): Promise<void> {
+    const sql = `UPDATE cts SET status = '1' WHERE id = ?`;
+    await this.mysqlConnection.query(sql, [id]);
+}

@@ -152,6 +152,7 @@ declare global {
 export interface CT {
     id: number;
     ipv4: string;
+    ready: boolean;
 }
 
 export interface ContainerStatus {

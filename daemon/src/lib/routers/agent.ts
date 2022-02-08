@@ -54,6 +54,7 @@ export function initAgentRouter(this: ContainerWorkspaces): void {
             containerID,
             containerID.toString()
         );
+        await this.proxmoxClient.setCTAsReady(containerID);
         res.send({ hostname: containerID.toString(), status: 'ok' });
     });
 }
