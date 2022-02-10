@@ -7,7 +7,7 @@ import {
     printSuccess,
 } from './lib/utils';
 import { connectToDatabase } from './lib/connectToDatabase';
-import setupQuerys from './setup.sql';
+import setupQueries from './setup.sql';
 
 async function main() {
     const { host, port, user, password } = await promptForSQLInfo();
@@ -23,7 +23,7 @@ async function main() {
         password,
     }).catch(handleFatalCatch('connection to database'));
 
-    await runSQLSetup(databaseConnection, setupQuerys).catch(
+    await runSQLSetup(databaseConnection, setupQueries).catch(
         handleFatalCatch('SQL setup query execution')
     );
     databaseConnection.destroy();
