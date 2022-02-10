@@ -1,0 +1,30 @@
+import {
+    anyNull,
+    fatalApp,
+    handleFatalCatch,
+    promptForSQLInfo,
+    runSQLSetup,
+} from './lib/utils';
+import { connectToDatabase } from './lib/connectToDatabase';
+import setupQuerys from './setup.sql';
+
+async function main() {
+    const { host, port, user, password } = await promptForSQLInfo();
+
+    if (anyNull(host, port, user, password)) {
+        fatalApp('Not enough information to connect to database');
+    }
+
+    const databaseConnection = await connectToDatabase({
+        host,
+        port,
+        user,
+        password,
+    }).catch(handleFatalCatch('connection to database'));
+
+    await runSQLSetup(databaseConnection, setupQuerys).catch(
+        handleFatalCatch('SQL setup query execution')
+    );
+}
+
+main();

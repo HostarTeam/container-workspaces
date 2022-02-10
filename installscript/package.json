@@ -1,22 +1,29 @@
 {
-  "name": "installscript",
-  "version": "1.0.0",
-  "description": "Install script for container workspaces",
-  "main": "dist/app.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/HostarTeam/container-workspaces.git"
-  },
-  "author": "Uri Bar Ilan (@ubarilan)",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/HostarTeam/container-workspaces/issues"
-  },
-  "homepage": "https://github.com/HostarTeam/container-workspaces#readme",
-  "devDependencies": {
-    "@types/node": "^17.0.16"
-  }
+    "name": "installscript",
+    "version": "1.0.0",
+    "description": "Install script for container workspaces",
+    "main": "dist/app.js",
+    "scripts": {
+        "dev": "nodemon src/app.ts",
+        "build": "tsc -p .",
+        "start": "node dist/app.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/HostarTeam/container-workspaces.git"
+    },
+    "author": "Uri Bar Ilan (@ubarilan)",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/HostarTeam/container-workspaces/issues"
+    },
+    "homepage": "https://github.com/HostarTeam/container-workspaces#readme",
+    "devDependencies": {
+        "@types/node": "^17.0.16",
+        "@types/prompts": "^2.0.14"
+    },
+    "dependencies": {
+        "mysql2": "^2.3.3",
+        "prompts": "^2.4.2"
+    }
 }
