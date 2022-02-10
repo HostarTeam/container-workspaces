@@ -2,7 +2,8 @@
     "name": "installscript",
     "version": "1.0.0",
     "description": "Install script for container workspaces",
-    "main": "dist/app.js",
+    "main": "./dist/app.js",
+    "bin": "./dist/app.js",
     "scripts": {
         "dev": "nodemon src/app.ts",
         "build": "tsc -p .",

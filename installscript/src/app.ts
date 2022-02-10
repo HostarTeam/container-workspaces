@@ -4,6 +4,7 @@ import {
     handleFatalCatch,
     promptForSQLInfo,
     runSQLSetup,
+    printSuccess,
 } from './lib/utils';
 import { connectToDatabase } from './lib/connectToDatabase';
 import setupQuerys from './setup.sql';
@@ -25,6 +26,8 @@ async function main() {
     await runSQLSetup(databaseConnection, setupQuerys).catch(
         handleFatalCatch('SQL setup query execution')
     );
+    databaseConnection.destroy();
+    printSuccess('Setup complete');
 }
 
 main();
