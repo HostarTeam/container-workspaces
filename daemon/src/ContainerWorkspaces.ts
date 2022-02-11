@@ -86,6 +86,7 @@ export default class ContainerWorkspaces {
         this.configureLoggers();
 
         this.webApp = express();
+        this.webApp.disable('x-powered-by');
         this.initRouters();
         this.initWebApp();
 
