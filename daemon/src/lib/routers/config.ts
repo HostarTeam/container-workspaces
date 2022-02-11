@@ -84,6 +84,23 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
     );
 
     /**
+     * This route is used in order to get all locations from the database.
+     */
+    router.get('/locations', async (req: Request, res: Response) => {
+        const locations: string[] = await this.proxmoxClient.getLocations();
+        res.send(locations);
+    });
+
+    /**
+     * This route is used in order to get all available locations.
+     */
+    router.get('/locations/available', async (req: Request, res: Response) => {
+        const locations: string[] =
+            await this.proxmoxClient.getAvailableLocations();
+        res.send(locations);
+    });
+
+    /**
      * This route is used in order to get all available ip addresses.
      */
     router.get('/ips', async (req: Request, res: Response) => {

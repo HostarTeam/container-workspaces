@@ -11,6 +11,23 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
     const router: Router = this.containerRouter;
 
     /**
+     * This route is used to get the current configuration of all containers.
+     */
+    router.get('/', async (req: Request, res: Response) => {
+        const containers: LXC[] = await this.proxmoxClient.getContainers();
+        res.send(containers);
+    });
+
+    /**
+     * This route is used to get the current status of all containers.
+     */
+    router.get('/status', async (req: Request, res: Response) => {
+        const containerStatuses: ContainerStatus[] =
+            await this.proxmoxClient.getContainerStatuses();
+        res.send(containerStatuses);
+    });
+
+    /**
      * @param {string} containerID
      * This route is used in order to get the current configuration of a container.
      */
@@ -99,6 +116,18 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
 
     /**
      * @param {string} containerID
+     * This route is used in order to shutdown a container.
+     */
+    router.patch(
+        '/:containerID/shutdown',
+        this.getContainerIP(),
+        async (req: Request, res: Response) => {
+            await this.triggerStatusChange(req, res, 'shutdown');
+        }
+    );
+
+    /**
+     * @param {string} containerID
      * This route is used in order to stop a container.
      */
     router.patch(
@@ -175,7 +204,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
                         'Container with given ID is not connected to this server',
                 });
             } else {
-                const newPassword = req.body.password;
+                const newPassword = String(req.body.password);
 
                 // Not necessarily executed successfully
                 const sentSuccessfully = await this.changeContainerPassword(
@@ -197,7 +226,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      * This route is used in order to delete a container.
      */
     router.delete(
-        '/:containerID/',
+        '/:containerID',
         this.getContainerIP(),
         async (req: Request, res: Response) => {
             const containerID: number = Number(req.params.containerID);

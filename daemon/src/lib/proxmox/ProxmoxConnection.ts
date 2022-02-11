@@ -14,6 +14,7 @@ import {
     deleteContainer,
     deleteContainerFromDB,
     getAuthKeys,
+    getAvailableLocations,
     getContainerInfo,
     getContainerIP,
     getContainerStatus,
@@ -33,6 +34,8 @@ import {
     removeNodeFromDatabase,
     setCTAsReady,
     updateIPUsedStatus,
+    getContainers,
+    getContainerStatuses,
 } from './apiTools';
 
 export default class ProxmoxConnection {
@@ -73,6 +76,7 @@ export default class ProxmoxConnection {
     public addNodeToDatabase = addNodeToDatabase;
     public removeNodeFromDatabase = removeNodeFromDatabase;
     public getLocations = getLocations;
+    public getAvailableLocations = getAvailableLocations;
     public getSQLNode = getSQLNode;
     public getIP = getIP;
     public getIPs = getIPs;
@@ -80,6 +84,8 @@ export default class ProxmoxConnection {
     public removeIPFromDatabase = removeIPFromDatabase;
     public changeCTHostname = changeCTHostname;
     public setCTAsReady = setCTAsReady;
+    public getContainers = getContainers;
+    public getContainerStatuses = getContainerStatuses;
 
     constructor({
         hostname,

@@ -5,6 +5,7 @@ import {
     ActionResult,
     ClusterNode,
     ContainerStatus,
+    CT,
     LXC,
     Node,
     ProxmoxResponse,
@@ -13,6 +14,7 @@ import {
     status,
 } from '../typing/types';
 import { CraeteCTOptions, CTOptions } from '../typing/options';
+import { time } from 'console';
 
 export function call(
     this: ProxmoxConnection,
@@ -23,7 +25,6 @@ export function call(
     let promise = new Promise(async (resolve, reject) => {
         let options = {
             headers: {
-                'Content-Type': 'application/json',
                 Accept: 'application/json',
                 Authorization: `PVEAuthCookie=${this.authCookie}`,
             },
@@ -31,7 +32,10 @@ export function call(
         };
         if (['POST', 'PUT', 'DELETE'].includes(method.toUpperCase()))
             options.headers['CSRFPreventionToken'] = this.csrfPreventionToken;
-        if (body) (options as any).body = JSON.stringify(body);
+        if (body) {
+            options['Content-Type'] = 'application/json';
+            (options as any).body = JSON.stringify(body);
+        }
         try {
             var res: Response = await fetch(
                 `${this.basicURL}/${path}`,
@@ -47,7 +51,8 @@ export function call(
             this.pveLogger.info(
                 `${method.toUpperCase()} - ${path} - ${res.status}`
             );
-            resolve(await res.json());
+            const jsonRes = await res.json();
+            resolve(jsonRes);
         } catch (err) {
             this.pveLogger.error(
                 `${method.toUpperCase()} - ${path} - ${
@@ -86,7 +91,11 @@ export async function getPVENode(
 
 export async function getSQLNodes(this: ProxmoxConnection): Promise<SQLNode[]> {
     const sql = 'SELECT * FROM nodes';
-    const nodes = (await this.mysqlConnection.query(sql))[0];
+    const res = (await this.mysqlConnection.query(sql))[0];
+    if (!res) return null;
+    const nodes: SQLNode[] = res.map((node: SQLNode) => {
+        return { ...node, is_main: !!node.is_main };
+    });
     return nodes;
 }
 
@@ -97,6 +106,7 @@ export async function getSQLNode(
     const sql = 'SELECT * FROM nodes WHERE nodename = ?';
     const node = (await this.mysqlConnection.query(sql, [nodename]))[0][0];
     if (!node) return null;
+    node.is_main = !!node.is_main;
     return node;
 }
 
@@ -125,9 +135,27 @@ export async function removeNodeFromDatabase(
 export async function getLocations(this: ProxmoxConnection): Promise<string[]> {
     const sql = 'SELECT DISTINCT location FROM nodes';
     const locations = (await this.mysqlConnection.query(sql))[0].map(
-        (node) => node.location
+        (node: SQLNode) => node.location
     );
     return locations;
+}
+
+export async function getAvailableLocations(
+    this: ProxmoxConnection
+): Promise<string[]> {
+    const availableLocations: string[] = [];
+    const nodes = await this.getNodes();
+    for (const node of nodes) {
+        const sqlNode = await this.getSQLNode(node.node);
+        if (
+            sqlNode &&
+            !availableLocations.includes(sqlNode.location) &&
+            this.checkIfNodeIsFine(node.node)
+        ) {
+            availableLocations.push(sqlNode.location);
+        }
+    }
+    return availableLocations;
 }
 
 export async function getAuthKeys(this: ProxmoxConnection): Promise<void> {
@@ -199,9 +227,12 @@ export async function getFreeIP(
 
 export async function getIPs(this: ProxmoxConnection): Promise<SQLIP[]> {
     const sql: string = 'SELECT * FROM ips';
-    const result: SQLIP[] = (await this.mysqlConnection.query(sql))[0];
-    if (!result) return null;
-    return result;
+    const res: [] = (await this.mysqlConnection.query(sql))[0];
+    if (!res) return null;
+    const ips: SQLIP[] = res.map((ip: SQLIP) => {
+        return { ...ip, used: !!ip.used };
+    });
+    return ips;
 }
 
 export async function addIPToDatabase(
@@ -391,7 +422,7 @@ export async function getNodeByLocation(
     location: string
 ): Promise<string> {
     const query = 'SELECT * FROM nodes WHERE location = ?';
-    const [nodes]: SQLNode[][] = await this.mysqlConnection.query(query, [
+    let [nodes]: SQLNode[][] = await this.mysqlConnection.query(query, [
         location,
     ]);
 
@@ -404,7 +435,7 @@ export async function getNodeOfContainer(
 ): Promise<string> {
     const nodes = await this.getNodes();
     for (const node of nodes) {
-        const res = await this.call(`/nodes/${node.node}/lxc/${id}`, 'GET');
+        const res = await this.call(`nodes/${node.node}/lxc/${id}`, 'GET');
 
         if (res.data) return node.node;
     }
@@ -430,6 +461,9 @@ export async function getContainerInfo(
     const nodename = await this.getNodeOfContainer(id);
     if (!nodename) return null;
     let ctConfig = await this.call(`nodes/${nodename}/lxc/${id}/config`, 'GET');
+    if (!ctConfig.data) return null;
+    if (ctConfig.data.unprivileged != null)
+        ctConfig.data.unprivileged = !!ctConfig.data.unprivileged;
     const containerData: LXC = ctConfig.data;
     return containerData;
 }
@@ -444,6 +478,9 @@ export async function getContainerStatus(
         `nodes/${nodename}/lxc/${id}/status/current`,
         'GET'
     );
+    if (!ctConfig.data) return null;
+    if (ctConfig.data.ha?.managed != null)
+        ctConfig.data.ha.managed = !!ctConfig.data.ha.managed;
     const containerData: ContainerStatus = ctConfig.data;
     return containerData;
 }
@@ -452,14 +489,21 @@ export async function changeContainerStatus(
     this: ProxmoxConnection,
     containerID: number,
     status: status
-): Promise<string | null> {
-    const nodename = await this.getNodeOfContainer(containerID);
-    if (!nodename) return null;
-    let ctConfig = await this.call(
-        `nodes/${nodename}/lxc/${containerID}/status/${status}`,
-        'POST'
-    );
-    return ctConfig.data;
+): Promise<string> {
+    try {
+        const nodename = await this.getNodeOfContainer(containerID);
+        if (!nodename) return null;
+        let ctConfig = (
+            await this.call(
+                `nodes/${nodename}/lxc/${containerID}/status/${status}`,
+                'POST'
+            )
+        ).data;
+        return ctConfig;
+    } catch (err) {
+        console.error(err);
+        return null;
+    }
 }
 
 export async function changeCTHostname(
@@ -479,4 +523,28 @@ export async function setCTAsReady(
 ): Promise<void> {
     const sql = `UPDATE cts SET status = '1' WHERE id = ?`;
     await this.mysqlConnection.query(sql, [id]);
+}
+
+export async function getContainers(this: ProxmoxConnection): Promise<LXC[]> {
+    const containers: LXC[] = [];
+    const sql = 'SELECT * FROM cts';
+    const cts: CT[] = (await this.mysqlConnection.query(sql))[0];
+    for (const ct of cts) {
+        const containerData = await this.getContainerInfo(ct.id);
+        if (containerData) containers.push(containerData);
+    }
+    return containers;
+}
+
+export async function getContainerStatuses(
+    this: ProxmoxConnection
+): Promise<ContainerStatus[]> {
+    const containerStatuses: ContainerStatus[] = [];
+    const sql = 'SELECT * FROM cts';
+    const cts: CT[] = (await this.mysqlConnection.query(sql))[0];
+    for (const ct of cts) {
+        const containerData = await this.getContainerStatus(ct.id);
+        if (containerData) containerStatuses.push(containerData);
+    }
+    return containerStatuses;
 }
