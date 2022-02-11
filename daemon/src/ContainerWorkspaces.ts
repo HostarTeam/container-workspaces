@@ -74,6 +74,8 @@ export default class ContainerWorkspaces {
         remoteAddress,
         remotePort,
         protocol,
+        database: DatabaseConf,
+        pve: PVEConf,
     }: Configuration) {
         this.apiKey = apiKey;
         this.listenAddress = listenAddress;
@@ -87,29 +89,18 @@ export default class ContainerWorkspaces {
         this.initRouters();
         this.initWebApp();
 
-        const {
-            PVE_HOSTNAME,
-            PVE_PROTOCOL,
-            PVE_USERNAME,
-            PVE_PASSWORD,
-            DB_HOST,
-            DB_USER,
-            DB_PASSWORD,
-            DB_NAME,
-        } = process.env;
-
         this.mysqlConnection = this.connectToDatabase({
-            host: DB_HOST,
-            user: DB_USER,
-            password: DB_PASSWORD,
-            database: DB_NAME,
+            host: DatabaseConf.host,
+            user: DatabaseConf.user,
+            password: DatabaseConf.password,
+            database: DatabaseConf.database,
         });
 
         this.proxmoxClient = new ProxmoxConnection({
-            hostname: PVE_HOSTNAME,
-            protocol: PVE_PROTOCOL,
-            username: PVE_USERNAME,
-            password: PVE_PASSWORD,
+            hostname: PVEConf.hostname,
+            protocol: PVEConf.protocol,
+            username: PVEConf.username,
+            password: PVEConf.password,
             pveLogger: this.pveLogger,
             mysqlConnection: this.mysqlConnection,
         });
@@ -155,15 +146,14 @@ export default class ContainerWorkspaces {
         });
 
         this.httpServer.on('upgrade', (request, socket, head) => {
+            const connected = this.getConnectedClient(
+                request.socket.remoteAddress
+            );
             this.wss.handleUpgrade(request, socket, head, async (socket) => {
+                if (connected) socket.close();
                 let isAuthorized: boolean = await this.checkIP(
                     request.socket.remoteAddress
                 );
-
-                const connected = this.getConnectedClient(
-                    request.socket.remoteAddress
-                );
-                if (connected) socket.close();
 
                 if (isAuthorized) this.wss.emit('connection', socket, request);
                 else socket.close();
@@ -329,7 +319,7 @@ export default class ContainerWorkspaces {
 
             if (!agentIP) {
                 res.status(404).send({
-                    status: 'not foud',
+                    status: 'not found',
                     message: 'Could not find container with such ID',
                 });
             } else if (!ipValid) {

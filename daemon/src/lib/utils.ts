@@ -25,7 +25,7 @@ export function printSuccess(message): void {
 }
 
 export async function readConfFile(): Promise<Configuration> {
-    const fileLocation: string = '/etc/container-workspaces/server.json';
+    const fileLocation: string = '/etc/container-workspaces/conf.json';
     let fileContent = '';
     try {
         fileContent = await readFileSync(fileLocation, 'utf8');

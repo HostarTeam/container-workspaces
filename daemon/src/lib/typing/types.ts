@@ -8,6 +8,19 @@ export interface Configuration {
     remoteAddress: string;
     remotePort: number;
     protocol: 'http' | 'https';
+    database: {
+        host: string;
+        port: number;
+        user: string;
+        password: string;
+        database: string;
+    };
+    pve: {
+        hostname: string;
+        protocol: Configuration['protocol'];
+        username: string;
+        password: string;
+    };
 }
 
 export type httpProtocol = 'http' | 'https';
@@ -98,7 +111,7 @@ export interface LXC {
     timezone?: string;
     tty?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
     unique?: boolean;
-    unprivilieged?: boolean;
+    unprivileged?: boolean;
     unused0?: string;
 }
 
@@ -161,7 +174,7 @@ export interface ContainerStatus {
     disk: number; // Represents the used disk size in bytes.
     diskread: number; // Represents the disk read in bytes.
     diskwrite: number; // Represents the disk write in bytes.
-    ha: { managed: 0 | 1 };
+    ha: { managed: boolean };
     maxdisk: number; // Represents the max disk size in bytes.
     maxmem: number; // Represents the max memory size in bytes.
     maxswap: number; // Represents the max swap size in bytes.
@@ -179,6 +192,7 @@ export interface ContainerStatus {
 
 export interface ProxmoxResponse {
     data?: any;
+    errors?: string[];
     [key: string]: any;
 }
 
