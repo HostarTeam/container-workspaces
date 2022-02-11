@@ -6,6 +6,7 @@ import express, {
     Response,
     Handler,
 } from 'express';
+import cors from 'cors';
 import { createServer, Server } from 'http';
 import { Log4js, Logger } from 'log4js';
 import { initMainRouter } from './lib/routers/main';
@@ -86,7 +87,6 @@ export default class ContainerWorkspaces {
         this.configureLoggers();
 
         this.webApp = express();
-        this.webApp.disable('x-powered-by');
         this.initRouters();
         this.initWebApp();
 
@@ -110,6 +110,8 @@ export default class ContainerWorkspaces {
     private initWebApp(): void {
         this.httpServer = createServer();
 
+        this.webApp.disable('x-powered-by');
+        this.webApp.use(cors());
         this.webApp.use(express.json());
         this.webApp.use(express.urlencoded({ extended: true }));
         this.webApp.use(this.httpLoggerMiddleware(this.httpLogger));
