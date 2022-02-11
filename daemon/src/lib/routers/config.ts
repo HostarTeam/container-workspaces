@@ -150,39 +150,44 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
      * @param {string} gateway The gateway address in req.body.
      * @param {string} netmask The netmask address in req.body.
      */
-    router.post('/ips/addbulk', async (req: Request, res: Response) => {
-        const ipv4s: string[] = req.body.ipv4s;
-        const gateway = String(req.body.gateway);
-        const netmask = String(req.body.netmask);
+    router.post(
+        '/ips/addbulk',
+        requireBodyProps('ipv4s', 'gateway', 'netmask'),
+        async (req: Request, res: Response) => {
+            const ipv4s: string[] = req.body.ipv4s;
+            const gateway = String(req.body.gateway);
+            const netmask = String(req.body.netmask);
 
-        const ips: SQLIP['ipv4'][] = await (
-            await this.proxmoxClient.getIPs()
-        ).map((ip) => ip.ipv4);
+            const ips: SQLIP['ipv4'][] = (
+                await this.proxmoxClient.getIPs()
+            ).map((ip) => ip.ipv4);
 
-        const ipv4sToAdd: string[] = ipv4s.filter(
-            (ipv4) => !ips.includes(ipv4)
-        );
+            const ipv4sToAdd: string[] = ipv4s.filter(
+                (ipv4) => !ips.includes(ipv4)
+            );
 
-        if (ipv4sToAdd.length === 0) {
-            res.status(409).send({
-                status: 'conflict',
-                message: 'No IPs to add, all IPs already exist in the database',
-            });
-        } else {
-            for (const ipv4 of ipv4sToAdd) {
-                await this.proxmoxClient.addIPToDatabase({
-                    ipv4,
-                    gateway,
-                    netmask,
-                    used: false,
+            if (ipv4sToAdd.length === 0) {
+                res.status(409).send({
+                    status: 'conflict',
+                    message:
+                        'No IPs to add, all IPs already exist in the database',
+                });
+            } else {
+                for (const ipv4 of ipv4sToAdd) {
+                    await this.proxmoxClient.addIPToDatabase({
+                        ipv4,
+                        gateway,
+                        netmask,
+                        used: false,
+                    });
+                }
+                res.status(201).send({
+                    status: 'created',
+                    message: 'IPs added successfully',
                 });
             }
-            res.status(201).send({
-                status: 'created',
-                message: 'IPs added successfully',
-            });
         }
-    });
+    );
 
     /**
      * This route is used in order to remove a ip address from the available ip addresses in the databases.
@@ -228,7 +233,7 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
         '/ctoptions',
         requireBodyProps('ct_options'),
         async (req: Request, res: Response) => {
-            const ctOptions = req.body.ct_options;
+            const ctOptions: CTOptions = req.body.ct_options;
             await this.udpateCTOptions(ctOptions);
             res.send({
                 status: 'ok',

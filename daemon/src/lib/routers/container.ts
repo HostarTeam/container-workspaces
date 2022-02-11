@@ -140,10 +140,10 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
 
     /**
      * @param {string} containerID
-     * This route is used in order to restart a container.
+     * This route is used in order to reboot a container.
      */
     router.patch(
-        '/:containerID/restart',
+        '/:containerID/reboot',
         this.getContainerIP(),
         async (req: Request, res: Response) => {
             await this.triggerStatusChange(req, res, 'reboot');
