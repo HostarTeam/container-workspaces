@@ -1,4 +1,4 @@
-import express, {
+import {
     Application,
     NextFunction,
     Router,
@@ -7,18 +7,12 @@ import express, {
     Handler,
 } from 'express';
 import cors from 'cors';
-import { createServer, Server } from 'http';
+import { Server } from 'http';
 import { Log4js, Logger } from 'log4js';
 import { initMainRouter } from './lib/routers/main';
 import { initAgentRouter } from './lib/routers/agent';
 import { initContainerRouter } from './lib/routers/container';
-import {
-    checkIP,
-    createLoggers,
-    printSuccess,
-    sleep,
-    validateAuth,
-} from './lib/utils';
+import { checkIP, createLoggers, printSuccess, sleep } from './lib/utils';
 import ProxmoxConnection from './lib/proxmox/ProxmoxConnection';
 import { WebSocket, WebSocketServer } from 'ws';
 import { connectToDatabase } from './lib/mysql';
@@ -31,15 +25,16 @@ import { Config, status, Configuration, CT } from './lib/typing/types';
 import { MessageData } from './lib/typing/MessageData';
 import { initConfigRouter } from './lib/routers/config';
 import { CTOptions } from './lib/typing/options';
+import setupHttp from './http';
 
 export default class ContainerWorkspaces {
-    private httpServer: Server;
-    private apiKey: string;
-    private listenAddress: string;
-    private listenPort: number;
-    protected remoteAddress: string;
-    protected remotePort: number;
-    protected protocol: Configuration['protocol'];
+    protected httpServer: Server;
+    protected apiKey: string;
+    protected readonly listenAddress: string;
+    protected readonly listenPort: number;
+    protected readonly remoteAddress: string;
+    protected readonly remotePort: number;
+    protected readonly protocol: Configuration['protocol'];
 
     private log4js: Log4js;
     public mainLogger: Logger;
@@ -48,6 +43,7 @@ export default class ContainerWorkspaces {
     public pveLogger: Logger;
     public logLines: Map<Task['id'], string> = new Map();
 
+    protected setupHttp = setupHttp;
     protected initMainRouter = initMainRouter;
     protected initAgentRouter = initAgentRouter;
     protected initConfigRouter = initConfigRouter;
@@ -86,9 +82,7 @@ export default class ContainerWorkspaces {
         this.protocol = protocol;
         this.configureLoggers();
 
-        this.webApp = express();
-        this.initRouters();
-        this.initWebApp();
+        this.setupHttp();
 
         this.mysqlConnection = this.connectToDatabase({
             host: DatabaseConf.host,
@@ -107,28 +101,7 @@ export default class ContainerWorkspaces {
         });
     }
 
-    private initWebApp(): void {
-        this.httpServer = createServer();
-
-        this.webApp.disable('x-powered-by');
-        this.webApp.use(cors());
-        this.webApp.use(express.json());
-        this.webApp.use(express.urlencoded({ extended: true }));
-        this.webApp.use(this.httpLoggerMiddleware(this.httpLogger));
-        this.webApp.use(validateAuth(this.apiKey));
-
-        // Routers
-        this.webApp.use('/api/agent', this.agentRouter);
-        this.webApp.use('/api/container', this.containerRouter);
-        this.webApp.use('/api/config', this.configRouter);
-        this.webApp.use('/api', this.mainRouter);
-
-        this.httpServer.on('request', this.webApp);
-
-        this.initWebSocketServer();
-    }
-
-    private httpLoggerMiddleware(httpLogger: Logger): Handler {
+    protected httpLoggerMiddleware(httpLogger: Logger): Handler {
         return function (req: Request, res: Response, next: NextFunction) {
             res.on('finish', () => {
                 httpLogger.info(
@@ -139,7 +112,7 @@ export default class ContainerWorkspaces {
         };
     }
 
-    private initWebSocketServer(): void {
+    protected initWebSocketServer(): void {
         this.wss = new WebSocketServer({ noServer: true });
         this.wss.on('connection', (socket, req) => {
             const ip: string = req.socket.remoteAddress;
@@ -162,12 +135,6 @@ export default class ContainerWorkspaces {
                 else socket.close();
             });
         });
-
-        this.httpServer.listen(this.listenPort, this.listenAddress, () => {
-            printSuccess(
-                `App is running on ${this.listenAddress}:${this.listenPort} - ${this.protocol}://${this.remoteAddress}:${this.remotePort}`
-            );
-        });
     }
 
     private configureLoggers(logDir: string = '/var/log/cw'): void {
@@ -180,7 +147,7 @@ export default class ContainerWorkspaces {
         this.pveLogger = this.log4js.getLogger('pve');
     }
 
-    private initRouters(): void {
+    protected initRouters(): void {
         this.initConfigRouter();
         this.initContainerRouter();
         this.initMainRouter();
