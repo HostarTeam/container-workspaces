@@ -1,6 +1,6 @@
 import { Logger } from 'log4js';
 import { httpProtocol } from '../typing/types';
-import MySQLClient from '../util/MySQLClient';
+import MySQLClient from '../database/MySQLClient';
 import { getNodesName, printSuccess } from '../util/utils';
 import {
     addCotainerToDatabase,

@@ -154,9 +154,10 @@ export async function checkAuthToken(
     const [client_id, client_secret] = decodedToken.split(':');
     const sql = 'SELECT client_secret FROM clients where client_id = ?';
 
-    const result: SQLClient = (
-        await this.mySQLClient.getQueryResult(sql, client_id)
-    )[0];
+    const result: SQLClient = await this.mySQLClient.getFirstQueryResult(
+        sql,
+        client_id
+    );
 
     if (!result) return false;
 

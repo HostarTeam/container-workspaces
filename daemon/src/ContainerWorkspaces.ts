@@ -24,8 +24,8 @@ import { CTOptions } from './lib/typing/options';
 import setupHttp from './http';
 import httpLoggerMiddleware from './lib/middleware/logging';
 import authMiddleware from './lib/middleware/auth';
-import { Connection, ConnectionOptions } from 'mysql2';
-import MySQLClient from './lib/util/MySQLClient';
+import { ConnectionOptions } from 'mysql2';
+import MySQLClient from './lib/database/MySQLClient';
 
 export default class ContainerWorkspaces {
     protected httpServer: Server;
