@@ -1,9 +1,10 @@
 import { readFileSync } from 'fs';
-import { Configuration, CT } from './typing/types';
+import { Configuration, CT, SQLClient } from './typing/types';
 import { Handler, NextFunction, Request, Response } from 'express';
 import ProxmoxConnection from './proxmox/ProxmoxConnection';
 import ContainerWorkspaces from '../ContainerWorkspaces';
-import log4js, { Log4js, Logger } from 'log4js';
+import log4js, { Log4js } from 'log4js';
+import { compareSync } from 'bcrypt';
 
 enum Colors {
     Reset = '\x1b[0m',
@@ -42,19 +43,10 @@ export async function readConfFile(): Promise<Configuration> {
     }
 }
 
-export function getAuthKey(req: Request): string | null {
+export function getEncodedBasicToken(req: Request): string | null {
     const headerValue = req.headers['authorization'];
     if (!headerValue) return null;
-    else return headerValue.split(/ +/).pop();
-}
-
-export function validateAuth(apiKey: string): Handler {
-    return function (req: Request, res: Response, next: NextFunction) {
-        if (req.path.startsWith('/api/agent')) return next();
-        const authKey: string | null = getAuthKey(req);
-        if (authKey === apiKey) next();
-        else res.status(401).send({ status: 'unauthorized' });
-    };
+    else return headerValue.split(' ').pop();
 }
 
 export async function getNodesName(this: ProxmoxConnection): Promise<string[]> {
@@ -152,4 +144,21 @@ export function requireBodyProps(...props: string[]): Handler {
         }
         next();
     };
+}
+
+export async function checkAuthToken(
+    this: ContainerWorkspaces,
+    token: string
+): Promise<boolean> {
+    const decodedToken: string = Buffer.from(token, 'base64').toString();
+    const [client_id, client_secret] = decodedToken.split(':');
+    const sql = 'SELECT client_secret FROM clients where client_id = ?';
+
+    const result: SQLClient = (
+        await this.mysqlConnection.query(sql, client_id)
+    )[0][0];
+
+    if (!result) return false;
+
+    return compareSync(client_secret, result.client_secret);
 }

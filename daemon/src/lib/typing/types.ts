@@ -221,3 +221,16 @@ export interface Config {
     ct_options: CTOptions;
     init_commands: string[];
 }
+
+export interface VNCTicket {
+    ticket: string;
+    user: string;
+    port: string;
+    upid: string;
+    cert?: string;
+}
+
+export interface SQLClient {
+    client_id?: number;
+    client_secret?: string;
+}

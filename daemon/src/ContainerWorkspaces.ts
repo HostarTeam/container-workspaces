@@ -1,18 +1,16 @@
-import {
-    Application,
-    NextFunction,
-    Router,
-    Request,
-    Response,
-    Handler,
-} from 'express';
-import cors from 'cors';
+import { Application, Router, Request, Response, Handler } from 'express';
 import { Server } from 'http';
 import { Log4js, Logger } from 'log4js';
 import { initMainRouter } from './lib/routers/main';
 import { initAgentRouter } from './lib/routers/agent';
 import { initContainerRouter } from './lib/routers/container';
-import { checkIP, createLoggers, printSuccess, sleep } from './lib/utils';
+import {
+    checkAuthToken,
+    checkIP,
+    createLoggers,
+    printSuccess,
+    sleep,
+} from './lib/utils';
 import ProxmoxConnection from './lib/proxmox/ProxmoxConnection';
 import { WebSocket, WebSocketServer } from 'ws';
 import { connectToDatabase } from './lib/mysql';
@@ -26,6 +24,8 @@ import { MessageData } from './lib/typing/MessageData';
 import { initConfigRouter } from './lib/routers/config';
 import { CTOptions } from './lib/typing/options';
 import setupHttp from './http';
+import httpLoggerMiddleware from './lib/middleware/logging';
+import authMiddleware from './lib/middleware/auth';
 
 export default class ContainerWorkspaces {
     protected httpServer: Server;
@@ -53,6 +53,9 @@ export default class ContainerWorkspaces {
     protected wsCommand = wsCommand;
     protected checkIP = checkIP;
     protected sendTaskToAgent = sendTaskToAgent;
+    protected httpLoggerMiddleware = httpLoggerMiddleware;
+    protected authMiddleware = authMiddleware;
+    protected checkAuthToken = checkAuthToken;
 
     protected webApp: Application;
     protected wss: WebSocketServer;
@@ -99,17 +102,6 @@ export default class ContainerWorkspaces {
             pveLogger: this.pveLogger,
             mysqlConnection: this.mysqlConnection,
         });
-    }
-
-    protected httpLoggerMiddleware(httpLogger: Logger): Handler {
-        return function (req: Request, res: Response, next: NextFunction) {
-            res.on('finish', () => {
-                httpLogger.info(
-                    `${req.baseUrl}${req.path} - ${req.method} - ${res.statusCode} - ${req.ip}`
-                );
-            });
-            next();
-        };
     }
 
     protected initWebSocketServer(): void {

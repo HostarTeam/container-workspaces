@@ -2,7 +2,7 @@ import cors from 'cors';
 import express, { json, urlencoded } from 'express';
 import { createServer } from 'http';
 import ContainerWorkspaces from './ContainerWorkspaces';
-import { validateAuth, printSuccess } from './lib/utils';
+import { printSuccess } from './lib/utils';
 
 export default function setupHttp(this: ContainerWorkspaces): void {
     this.httpServer = createServer();
@@ -14,14 +14,17 @@ export default function setupHttp(this: ContainerWorkspaces): void {
     this.webApp.use(cors());
     this.webApp.use(json());
     this.webApp.use(urlencoded({ extended: true }));
-    this.webApp.use(this.httpLoggerMiddleware(this.httpLogger));
-    this.webApp.use(validateAuth(this.apiKey));
+    this.webApp.use(this.httpLoggerMiddleware());
 
     // Routers
     this.webApp.use('/api/agent', this.agentRouter);
-    this.webApp.use('/api/container', this.containerRouter);
-    this.webApp.use('/api/config', this.configRouter);
-    this.webApp.use('/api', this.mainRouter);
+    this.webApp.use(
+        '/api/container',
+        this.authMiddleware(),
+        this.containerRouter
+    );
+    this.webApp.use('/api/config', this.authMiddleware(), this.configRouter);
+    this.webApp.use('/api', this.authMiddleware(), this.mainRouter);
 
     this.httpServer.on('request', this.webApp);
 
