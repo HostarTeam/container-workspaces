@@ -3,7 +3,7 @@ import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { MessageData } from '../typing/MessageData';
 import { Task } from '../typing/Task';
 import { ActionResult, ContainerStatus, LXC } from '../typing/types';
-import { requireBodyProps, validatePassword } from '../utils';
+import { requireBodyProps, validatePassword } from '../util/utils';
 import { ClientNotFoundError } from '../ws/commandAgent';
 
 export function initContainerRouter(this: ContainerWorkspaces): void {
@@ -248,6 +248,23 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
 
     /**
      * @param {string} containerID
+     * This route is used in order to get a vncticket for a websocket of a container.
+     */
+    router.post(
+        '/:containerID/vncticket',
+        async (req: Request, res: Response) => {
+            const containerID: number = Number(req.params.containerID);
+            const ticket = await this.proxmoxClient.getVNCTicket(containerID);
+            if (ticket) res.send({ status: 'ok', data: ticket });
+            else
+                res.status(409).send({
+                    status: 'conflict',
+                    message: 'could not get vnc ticket',
+                });
+        }
+    );
+
+    /**
      * @param {string} location The location of the container in req.body.
      * @param {string} template The template of the container in req.body.
      * @param {string} password The password of the container in req.body.

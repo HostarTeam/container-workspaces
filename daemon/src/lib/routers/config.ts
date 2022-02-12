@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { Node, SQLIP, SQLNode } from '../typing/types';
-import { requireBodyProps } from '../utils';
+import { requireBodyProps } from '../util/utils';
 import { CTOptions } from '../typing/options';
 
 export function initConfigRouter(this: ContainerWorkspaces): void {

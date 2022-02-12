@@ -1,4 +1,4 @@
-import { readConfFile } from './lib/utils';
+import { readConfFile } from './lib/util/utils';
 import { Configuration } from './lib/typing/types';
 import ContainerWorkspaces from './ContainerWorkspaces';
 

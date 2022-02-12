@@ -2,7 +2,7 @@ import cors from 'cors';
 import express, { json, urlencoded } from 'express';
 import { createServer } from 'http';
 import ContainerWorkspaces from './ContainerWorkspaces';
-import { printSuccess } from './lib/utils';
+import { printSuccess } from './lib/util/utils';
 
 export default function setupHttp(this: ContainerWorkspaces): void {
     this.httpServer = createServer();

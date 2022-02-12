@@ -1,6 +1,7 @@
 import { Logger } from 'log4js';
 import { httpProtocol } from '../typing/types';
-import { getNodesName, printSuccess } from '../utils';
+import MySQLClient from '../util/MySQLClient';
+import { getNodesName, printSuccess } from '../util/utils';
 import {
     addCotainerToDatabase,
     addIPToDatabase,
@@ -17,7 +18,9 @@ import {
     getAvailableLocations,
     getContainerInfo,
     getContainerIP,
+    getContainers,
     getContainerStatus,
+    getContainerStatuses,
     getFirstFineNode,
     getFreeIP,
     getIP,
@@ -30,12 +33,11 @@ import {
     getPVENode,
     getSQLNode,
     getSQLNodes,
+    getVNCTicket,
     removeIPFromDatabase,
     removeNodeFromDatabase,
     setCTAsReady,
     updateIPUsedStatus,
-    getContainers,
-    getContainerStatuses,
 } from './apiTools';
 
 export default class ProxmoxConnection {
@@ -46,7 +48,7 @@ export default class ProxmoxConnection {
     protected port: number;
     protected basicURL: string;
     protected pveLogger: Logger;
-    protected mysqlConnection: any;
+    protected mySQLClient: MySQLClient;
 
     protected authCookie: string = '';
     protected csrfPreventionToken: string = '';
@@ -86,6 +88,7 @@ export default class ProxmoxConnection {
     public setCTAsReady = setCTAsReady;
     public getContainers = getContainers;
     public getContainerStatuses = getContainerStatuses;
+    public getVNCTicket = getVNCTicket;
 
     constructor({
         hostname,
@@ -94,7 +97,15 @@ export default class ProxmoxConnection {
         password,
         port = 8006,
         pveLogger,
-        mysqlConnection,
+        mySQLClient,
+    }: {
+        hostname: string;
+        protocol: httpProtocol;
+        username: string;
+        password: string;
+        port?: number;
+        pveLogger: Logger;
+        mySQLClient: MySQLClient;
     }) {
         this.hostname = hostname;
         this.protocol = protocol;
@@ -102,7 +113,7 @@ export default class ProxmoxConnection {
         this.password = password;
         this.port = port;
         this.pveLogger = pveLogger;
-        this.mysqlConnection = mysqlConnection;
+        this.mySQLClient = mySQLClient;
         this.intialize();
         this.connect().then(() => {
             printSuccess('Connected to the PVE api');

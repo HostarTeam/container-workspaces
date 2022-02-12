@@ -10,15 +10,13 @@ import {
     createLoggers,
     printSuccess,
     sleep,
-} from './lib/utils';
+} from './lib/util/utils';
 import ProxmoxConnection from './lib/proxmox/ProxmoxConnection';
 import { WebSocket, WebSocketServer } from 'ws';
-import { connectToDatabase } from './lib/mysql';
 import { handleMessage } from './lib/ws/wsMessageHandler';
 import { wsCommand } from './lib/ws/routing/wsCommand';
 import { sendTaskToAgent } from './lib/ws/commandAgent';
 import { Task } from './lib/typing/Task';
-import { Connection } from 'mysql2/promise';
 import { Config, status, Configuration, CT } from './lib/typing/types';
 import { MessageData } from './lib/typing/MessageData';
 import { initConfigRouter } from './lib/routers/config';
@@ -26,6 +24,8 @@ import { CTOptions } from './lib/typing/options';
 import setupHttp from './http';
 import httpLoggerMiddleware from './lib/middleware/logging';
 import authMiddleware from './lib/middleware/auth';
+import { Connection, ConnectionOptions } from 'mysql2';
+import MySQLClient from './lib/util/MySQLClient';
 
 export default class ContainerWorkspaces {
     protected httpServer: Server;
@@ -48,7 +48,6 @@ export default class ContainerWorkspaces {
     protected initAgentRouter = initAgentRouter;
     protected initConfigRouter = initConfigRouter;
     protected initContainerRouter = initContainerRouter;
-    private connectToDatabase = connectToDatabase;
     protected handleMessage = handleMessage;
     protected wsCommand = wsCommand;
     protected checkIP = checkIP;
@@ -65,7 +64,7 @@ export default class ContainerWorkspaces {
     protected configRouter: Router;
     protected webSockerRouter;
     protected proxmoxClient: ProxmoxConnection;
-    public mysqlConnection: Connection;
+    protected mySQLClient: MySQLClient;
 
     constructor({
         apiKey,
@@ -74,7 +73,7 @@ export default class ContainerWorkspaces {
         remoteAddress,
         remotePort,
         protocol,
-        database: DatabaseConf,
+        database: databaseConf,
         pve: PVEConf,
     }: Configuration) {
         this.apiKey = apiKey;
@@ -87,12 +86,7 @@ export default class ContainerWorkspaces {
 
         this.setupHttp();
 
-        this.mysqlConnection = this.connectToDatabase({
-            host: DatabaseConf.host,
-            user: DatabaseConf.user,
-            password: DatabaseConf.password,
-            database: DatabaseConf.database,
-        });
+        this.connectDatabase(databaseConf);
 
         this.proxmoxClient = new ProxmoxConnection({
             hostname: PVEConf.hostname,
@@ -100,7 +94,7 @@ export default class ContainerWorkspaces {
             username: PVEConf.username,
             password: PVEConf.password,
             pveLogger: this.pveLogger,
-            mysqlConnection: this.mysqlConnection,
+            mySQLClient: this.mySQLClient,
         });
     }
 
@@ -148,7 +142,7 @@ export default class ContainerWorkspaces {
 
     public async addTask(task: Task): Promise<Task> {
         const sql: string = `INSERT INTO tasks (id, start_time, data, containerID) VALUES (?, ?, ?, ?)`;
-        await this.mysqlConnection.query(sql, [
+        await this.mySQLClient.executeQuery(sql, [
             task.id,
             task.start_time,
             JSON.stringify(task.data),
@@ -159,7 +153,7 @@ export default class ContainerWorkspaces {
     }
     public async getTask(id: Task['id']): Promise<Task | null> {
         const sql: string = `SELECT * FROM tasks WHERE id = ?`;
-        const result = (await this.mysqlConnection.query(sql, [id]))[0][0];
+        const result = await this.mySQLClient.getFirstQueryResult(sql, [id]);
         if (!result) return null;
         const task = new Task(result);
         return task;
@@ -167,7 +161,7 @@ export default class ContainerWorkspaces {
 
     public async updateTask(task: Task): Promise<Task> {
         const sql: string = `UPDATE tasks SET start_time = ?, end_time = ?, data = ?, status = ?, error = ?, containerID = ? WHERE id = ?`;
-        await this.mysqlConnection.query(sql, [
+        await this.mySQLClient.executeQuery(sql, [
             task.start_time,
             task.end_time,
             JSON.stringify(task.data),
@@ -299,7 +293,7 @@ export default class ContainerWorkspaces {
 
     private async getConfig(): Promise<Config> {
         const sql: string = `SELECT * FROM config`;
-        const result = (await this.mysqlConnection.query(sql))[0][0];
+        const result = await this.mySQLClient.getFirstQueryResult(sql);
         if (!result) return null;
         const config: Config = JSON.parse(result.config);
         return config;
@@ -307,7 +301,7 @@ export default class ContainerWorkspaces {
 
     private async updateConfig(config: Config): Promise<void> {
         const sql: string = `UPDATE config SET config = ?`;
-        await this.mysqlConnection.query(sql, [JSON.stringify(config)]);
+        await this.mySQLClient.executeQuery(sql, [JSON.stringify(config)]);
     }
 
     protected async getCTOptions(): Promise<CTOptions> {
@@ -336,8 +330,14 @@ export default class ContainerWorkspaces {
 
     protected async getContainerID(ip: string): Promise<number | null> {
         const sql: string = `SELECT id FROM cts WHERE ipv4 = ?`;
-        const result: CT = (await this.mysqlConnection.query(sql, [ip]))[0][0];
+        const result: CT = await this.mySQLClient.getFirstQueryResult(sql, ip);
         if (!result) return null;
         return result.id;
+    }
+
+    private async connectDatabase(connectionConfig: ConnectionOptions) {
+        this.mySQLClient = new MySQLClient(connectionConfig);
+        await this.mySQLClient.connect();
+        printSuccess('Connected to database');
     }
 }

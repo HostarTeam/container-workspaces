@@ -1,6 +1,6 @@
 import { Handler, NextFunction, Request, Response } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
-import { getEncodedBasicToken } from '../utils';
+import { getEncodedBasicToken } from '../util/utils';
 
 function authMiddleware(this: ContainerWorkspaces): Handler {
     return async (req: Request, res: Response, next: NextFunction) => {

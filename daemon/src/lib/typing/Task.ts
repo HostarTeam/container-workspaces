@@ -1,4 +1,4 @@
-import { generateID } from '../utils';
+import { generateID } from '../util/utils';
 import { MessageData } from '../typing/MessageData';
 
 export class Task {

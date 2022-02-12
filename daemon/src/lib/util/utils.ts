@@ -1,8 +1,8 @@
 import { readFileSync } from 'fs';
-import { Configuration, CT, SQLClient } from './typing/types';
+import { Configuration, CT, SQLClient } from '../typing/types';
 import { Handler, NextFunction, Request, Response } from 'express';
-import ProxmoxConnection from './proxmox/ProxmoxConnection';
-import ContainerWorkspaces from '../ContainerWorkspaces';
+import ProxmoxConnection from '../proxmox/ProxmoxConnection';
+import ContainerWorkspaces from '../../ContainerWorkspaces';
 import log4js, { Log4js } from 'log4js';
 import { compareSync } from 'bcrypt';
 
@@ -60,7 +60,7 @@ export async function checkIP(
     ip: string
 ): Promise<boolean> {
     const sql = 'SELECT ipv4 from cts';
-    const [cts]: Array<CT[]> = (await this.mysqlConnection.query(sql)) as any;
+    const cts: CT[] = await this.mySQLClient.getQueryResult(sql);
     let ips: string[] = cts.map((x) => x['ipv4']);
 
     return ips.includes(ip);
@@ -155,8 +155,8 @@ export async function checkAuthToken(
     const sql = 'SELECT client_secret FROM clients where client_id = ?';
 
     const result: SQLClient = (
-        await this.mysqlConnection.query(sql, client_id)
-    )[0][0];
+        await this.mySQLClient.getQueryResult(sql, client_id)
+    )[0];
 
     if (!result) return false;
 
