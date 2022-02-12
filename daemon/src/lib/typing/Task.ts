@@ -6,7 +6,7 @@ export class Task {
     public containerID: number;
     public start_time: number;
     public end_time?: number | null;
-    public data: MessageData | null;
+    public data: MessageData | string | null;
     public status?: 'OK' | 'error' | null; // Defaults to null
     public error?: string | null;
 
@@ -36,7 +36,7 @@ interface TaskOptions {
     containerID: number;
     start_time?: number;
     end_time?: number;
-    data: any | string;
+    data: MessageData | string;
     status?: Task['status'];
     error?: Task['error'];
 }

@@ -1,9 +1,10 @@
+import { CommandError } from './types';
+
 export class MessageData {
     public action: string;
     public method?: string;
-    public args?: {
-        [key: string]: any;
-    };
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    public args?: possibleArgs;
 
     constructor({ action, method, args }: MessageDataResponse) {
         if (action) this.action = action;
@@ -14,7 +15,6 @@ export class MessageData {
         if (method) this.method = method;
         else this.method = '';
         if (args) this.args = args;
-        else this.args = {};
     }
 }
 
@@ -29,6 +29,15 @@ export class MessageDataResponse extends MessageData {
                 "Proroperty 'taskid' is missing from message"
             );
     }
+}
+
+interface possibleArgs {
+    commands?: string[];
+    linesCount?: number;
+    password?: string;
+    errorReport?: CommandError;
+    lines?: string[] | null;
+    status?: 'success' | 'error';
 }
 
 export class InvalidMessageError extends Error {

@@ -1,4 +1,3 @@
-import WebSocket from 'ws';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { Task } from '../typing/Task';
 

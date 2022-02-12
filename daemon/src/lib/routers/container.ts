@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response, Router } from 'express';
+import { Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { MessageData } from '../typing/MessageData';
 import { Task } from '../typing/Task';
@@ -35,7 +35,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
         '/:containerID',
         this.getContainerIP(),
         async (req: Request, res: Response) => {
-            const containerID: number = Number(req.params.containerID);
+            const containerID = Number(req.params.containerID);
             const container: LXC = await this.proxmoxClient.getContainerInfo(
                 containerID
             );
@@ -52,7 +52,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
         '/:containerID/status',
         this.getContainerIP(),
         async (req: Request, res: Response) => {
-            const containerID: number = Number(req.params.containerID);
+            const containerID = Number(req.params.containerID);
             const status: ContainerStatus =
                 await this.proxmoxClient.getContainerStatus(containerID);
 
@@ -69,7 +69,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
         requireBodyProps('commands'),
         this.getContainerIP(),
         async (req: Request, res: Response) => {
-            const containerID: number = Number(req.params.containerID);
+            const containerID = Number(req.params.containerID);
             const commands: string[] = req.body.commands;
             const data: MessageData = {
                 action: 'shell_exec',
@@ -158,7 +158,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
         '/:containerID/logs',
         this.getContainerIP(),
         async (req: Request, res: Response) => {
-            const containerID: number = Number(req.params.containerID);
+            const containerID = Number(req.params.containerID);
             const agentIP: string = req.agentIP;
 
             const connectedAgent = this.getConnectedClient(agentIP);
@@ -192,7 +192,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
         requireBodyProps('password'),
         this.getContainerIP(),
         async (req: Request, res: Response) => {
-            const containerID: number = Number(req.params.containerID);
+            const containerID = Number(req.params.containerID);
             const agentIP: string = req.agentIP;
 
             const connectedAgent = this.getConnectedClient(agentIP);
@@ -229,7 +229,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
         '/:containerID',
         this.getContainerIP(),
         async (req: Request, res: Response) => {
-            const containerID: number = Number(req.params.containerID);
+            const containerID = Number(req.params.containerID);
 
             const deleted: ActionResult =
                 await this.proxmoxClient.deleteContainer(
@@ -242,24 +242,6 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
                     status: 'conflict',
                     message: 'could not delete container',
                     error: deleted.error,
-                });
-        }
-    );
-
-    /**
-     * @param {string} containerID
-     * This route is used in order to get a vncticket for a websocket of a container.
-     */
-    router.post(
-        '/:containerID/vncticket',
-        async (req: Request, res: Response) => {
-            const containerID: number = Number(req.params.containerID);
-            const ticket = await this.proxmoxClient.getVNCTicket(containerID);
-            if (ticket) res.send({ status: 'ok', data: ticket });
-            else
-                res.status(409).send({
-                    status: 'conflict',
-                    message: 'could not get vnc ticket',
                 });
         }
     );

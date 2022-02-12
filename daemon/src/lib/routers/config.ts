@@ -1,6 +1,6 @@
-import { NextFunction, Request, Response, Router } from 'express';
+import { Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
-import { Node, SQLIP, SQLNode } from '../typing/types';
+import { SQLIP, SQLNode } from '../typing/types';
 import { requireBodyProps } from '../util/utils';
 import { CTOptions } from '../typing/options';
 
@@ -11,14 +11,11 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
     /**
      * This route is used in order to get all available nodes.
      */
-    router.get(
-        '/nodes',
-        async (req: Request, res: Response, next: NextFunction) => {
-            const nodes: SQLNode[] = await this.proxmoxClient.getSQLNodes();
+    router.get('/nodes', async (req: Request, res: Response) => {
+        const nodes: SQLNode[] = await this.proxmoxClient.getSQLNodes();
 
-            res.send(nodes);
-        }
-    );
+        res.send(nodes);
+    });
 
     /**
      * This route is used in order to add a PVE node to the available nodes in the databases.

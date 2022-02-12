@@ -33,7 +33,6 @@ import {
     getPVENode,
     getSQLNode,
     getSQLNodes,
-    getVNCTicket,
     removeIPFromDatabase,
     removeNodeFromDatabase,
     setCTAsReady,
@@ -50,11 +49,10 @@ export default class ProxmoxConnection {
     protected pveLogger: Logger;
     protected mySQLClient: MySQLClient;
 
-    protected authCookie: string = '';
-    protected csrfPreventionToken: string = '';
+    protected authCookie = '';
+    protected csrfPreventionToken = '';
     protected getAuthKeys = getAuthKeys;
-    protected call: (path: string, method: string, body?: any) => Promise<any> =
-        call;
+    protected call = call;
     public getNodes = getNodes;
     public getNodesName = getNodesName;
     public createContainer = createContainer;
@@ -88,7 +86,6 @@ export default class ProxmoxConnection {
     public setCTAsReady = setCTAsReady;
     public getContainers = getContainers;
     public getContainerStatuses = getContainerStatuses;
-    public getVNCTicket = getVNCTicket;
 
     constructor({
         hostname,

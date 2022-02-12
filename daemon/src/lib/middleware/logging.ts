@@ -1,5 +1,4 @@
 import { Handler, NextFunction, Request, Response } from 'express';
-import { Logger } from 'log4js';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 
 function httpLoggerMiddleware(this: ContainerWorkspaces): Handler {

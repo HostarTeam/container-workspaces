@@ -101,7 +101,6 @@ export default class ContainerWorkspaces {
     protected initWebSocketServer(): void {
         this.wss = new WebSocketServer({ noServer: true });
         this.wss.on('connection', (socket, req) => {
-            const ip: string = req.socket.remoteAddress;
             socket.on('message', (message) => {
                 this.handleMessage(message, req, socket);
             });
@@ -113,7 +112,7 @@ export default class ContainerWorkspaces {
             );
             this.wss.handleUpgrade(request, socket, head, async (socket) => {
                 if (connected) socket.close();
-                let isAuthorized: boolean = await this.checkIP(
+                const isAuthorized: boolean = await this.checkIP(
                     request.socket.remoteAddress
                 );
 
@@ -123,7 +122,7 @@ export default class ContainerWorkspaces {
         });
     }
 
-    private configureLoggers(logDir: string = '/var/log/cw'): void {
+    private configureLoggers(logDir = '/var/log/cw'): void {
         const logsName = ['main', 'http', 'ws', 'pve'];
         this.log4js = createLoggers(logsName, logDir);
 
@@ -141,7 +140,8 @@ export default class ContainerWorkspaces {
     }
 
     public async addTask(task: Task): Promise<Task> {
-        const sql: string = `INSERT INTO tasks (id, start_time, data, containerID) VALUES (?, ?, ?, ?)`;
+        const sql =
+            'INSERT INTO tasks (id, start_time, data, containerID) VALUES (?, ?, ?, ?)';
         await this.mySQLClient.executeQuery(sql, [
             task.id,
             task.start_time,
@@ -152,7 +152,7 @@ export default class ContainerWorkspaces {
         return task;
     }
     public async getTask(id: Task['id']): Promise<Task | null> {
-        const sql: string = `SELECT * FROM tasks WHERE id = ?`;
+        const sql = 'SELECT * FROM tasks WHERE id = ?';
         const result = await this.mySQLClient.getFirstQueryResult(sql, [id]);
         if (!result) return null;
         const task = new Task(result);
@@ -160,7 +160,8 @@ export default class ContainerWorkspaces {
     }
 
     public async updateTask(task: Task): Promise<Task> {
-        const sql: string = `UPDATE tasks SET start_time = ?, end_time = ?, data = ?, status = ?, error = ?, containerID = ? WHERE id = ?`;
+        const sql =
+            'UPDATE tasks SET start_time = ?, end_time = ?, data = ?, status = ?, error = ?, containerID = ? WHERE id = ?';
         await this.mySQLClient.executeQuery(sql, [
             task.start_time,
             task.end_time,
@@ -195,7 +196,7 @@ export default class ContainerWorkspaces {
         res: Response,
         status: status
     ): Promise<void> {
-        const containerID: number = Number(req.params.containerID);
+        const containerID = Number(req.params.containerID);
         const statusRes = await this.proxmoxClient.changeContainerStatus(
             containerID,
             status
@@ -231,7 +232,9 @@ export default class ContainerWorkspaces {
     protected getConnectedClient(ip: string): WebSocket | null {
         const clientList: WebSocket[] = Array.from(this.wss.clients);
         const selectedClient: WebSocket = clientList.find(
+            /*eslint-disable */
             (client: any) => client._socket.remoteAddress === ip
+            /*eslint-enable */
         );
 
         return selectedClient;
@@ -266,7 +269,7 @@ export default class ContainerWorkspaces {
                     status: 'bad request',
                     message: 'containerID must be a number',
                 });
-            const containerID: number = Number(req.params.containerID);
+            const containerID = Number(req.params.containerID);
             const agentIP: string = await this.proxmoxClient.getContainerIP(
                 containerID
             );
@@ -292,7 +295,7 @@ export default class ContainerWorkspaces {
     }
 
     private async getConfig(): Promise<Config> {
-        const sql: string = `SELECT * FROM config`;
+        const sql = 'SELECT * FROM config';
         const result = await this.mySQLClient.getFirstQueryResult(sql);
         if (!result) return null;
         const config: Config = JSON.parse(result.config);
@@ -300,7 +303,7 @@ export default class ContainerWorkspaces {
     }
 
     private async updateConfig(config: Config): Promise<void> {
-        const sql: string = `UPDATE config SET config = ?`;
+        const sql = 'UPDATE config SET config = ?';
         await this.mySQLClient.executeQuery(sql, [JSON.stringify(config)]);
     }
 
@@ -310,7 +313,7 @@ export default class ContainerWorkspaces {
     }
 
     protected async udpateCTOptions(options: CTOptions): Promise<void> {
-        let config = await this.getConfig();
+        const config = await this.getConfig();
         config['ct_options'] = options;
 
         await this.updateConfig(config);
@@ -322,14 +325,14 @@ export default class ContainerWorkspaces {
     }
 
     protected async updateInitCommands(commands: string[]): Promise<void> {
-        let config = await this.getConfig();
+        const config = await this.getConfig();
         config['init_commands'] = commands;
 
         await this.updateConfig(config);
     }
 
     protected async getContainerID(ip: string): Promise<number | null> {
-        const sql: string = `SELECT id FROM cts WHERE ipv4 = ?`;
+        const sql = 'SELECT id FROM cts WHERE ipv4 = ?';
         const result: CT = await this.mySQLClient.getFirstQueryResult(sql, ip);
         if (!result) return null;
         return result.id;

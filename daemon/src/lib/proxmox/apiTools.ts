@@ -1,6 +1,6 @@
-import fetch, { Response } from 'node-fetch';
+import fetch, { RequestInit, Response } from 'node-fetch';
 import ProxmoxConnection from './ProxmoxConnection';
-import { generatePassword, netmaskToCIDR, printError } from '../util/utils';
+import { netmaskToCIDR, printError } from '../util/utils';
 import {
     ActionResult,
     ClusterNode,
@@ -12,62 +12,60 @@ import {
     SQLIP,
     SQLNode,
     status,
-    VNCTicket,
 } from '../typing/types';
 import { CraeteCTOptions, CTOptions } from '../typing/options';
-import { time } from 'console';
 
-export function call(
+export async function call<T>(
     this: ProxmoxConnection,
     path: string,
     method: string,
+    /*eslint-disable */
     body: any = null
-): Promise<ProxmoxResponse> {
-    let promise = new Promise(async (resolve, reject) => {
-        let options = {
-            headers: {
-                Accept: 'application/json',
-                Authorization: `PVEAuthCookie=${this.authCookie}`,
-            },
-            method: method,
-        };
-        if (['POST', 'PUT', 'DELETE'].includes(method.toUpperCase()))
-            options.headers['CSRFPreventionToken'] = this.csrfPreventionToken;
-        if (body) {
-            options['Content-Type'] = 'application/json';
-            (options as any).body = JSON.stringify(body);
-        }
-        try {
-            var res: Response = await fetch(
-                `${this.basicURL}/${path}`,
-                options
-            );
-            if (res.status == 401) {
-                this.pveLogger.warn(
-                    `${method.toUpperCase()} - ${path} - ${res.status}`
-                );
-                await this.getAuthKeys();
-                return await this.call(path, method, body);
-            }
-            this.pveLogger.info(
+    /*eslint-enable */
+): Promise<ProxmoxResponse<T>> {
+    const options: RequestInit = {
+        headers: {
+            Accept: 'application/json',
+            Authorization: `PVEAuthCookie=${this.authCookie}`,
+        },
+        method: method,
+    };
+
+    if (['POST', 'PUT', 'DELETE'].includes(method.toUpperCase()))
+        options.headers['CSRFPreventionToken'] = this.csrfPreventionToken;
+    if (body) {
+        options['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(body);
+    }
+
+    try {
+        const res: Response = await fetch(`${this.basicURL}/${path}`, options);
+        if (res.status == 401) {
+            this.pveLogger.warn(
                 `${method.toUpperCase()} - ${path} - ${res.status}`
             );
-            const jsonRes = await res.json();
-            resolve(jsonRes);
-        } catch (err) {
-            this.pveLogger.error(
-                `${method.toUpperCase()} - ${path} - ${
-                    res.status || 'no status code'
-                } - ${err.message || 'no error message'}`
-            );
-            reject(err);
+            await this.getAuthKeys();
+            return await this.call(path, method, body);
         }
-    });
-    return promise;
+        this.pveLogger.info(
+            `${method.toUpperCase()} - ${path} - ${res.status}`
+        );
+        const jsonRes = await res.json();
+        return jsonRes;
+    } catch (err) {
+        this.pveLogger.error(
+            `${method.toUpperCase()} - ${path} - ${
+                err.message || 'no error message'
+            }`
+        );
+        throw err;
+    }
 }
 
 export async function getNodes(this: ProxmoxConnection): Promise<Node[]> {
-    const PVENodes: Node[] = (await this.call('nodes', 'GET')).data;
+    const { data: PVENodes }: { data?: Node[] } = (
+        await this.call('nodes', 'GET')
+    ).data;
     const sql = 'SELECT nodename FROM nodes';
     const SQLNodes: SQLNode[] = await this.mySQLClient.getQueryResult(sql);
     const SQLNodenames: string[] = SQLNodes.map((node) => node.nodename);
@@ -82,7 +80,7 @@ export async function getPVENode(
     const nodes = await this.getNodes();
     const node = nodes.find((node) => node.node === nodename);
     const sql = 'SELECT nodename FROM nodes WHERE nodename = ?';
-    const existsInDatabase: boolean = !!this.mySQLClient.getFirstQueryResult(
+    const existsInDatabase = !!this.mySQLClient.getFirstQueryResult(
         sql,
         nodename
     );
@@ -162,16 +160,15 @@ export async function getAvailableLocations(
 
 export async function getAuthKeys(this: ProxmoxConnection): Promise<void> {
     try {
-        let username = `${this.username}@pam`,
+        const username = `${this.username}@pam`,
             password = this.password;
-        let res: Response = await fetch(
+        const res: Response = await fetch(
             `${this.basicURL}/access/ticket?username=${username}&password=${password}`,
             {
                 method: 'POST',
             }
         );
-        (res as any) = await res.json();
-        const data = (res as any).data;
+        const data = await res.json();
         this.authCookie = data.ticket;
         this.csrfPreventionToken = data.CSRFPreventionToken;
     } catch (error) {
@@ -206,9 +203,9 @@ export async function deleteContainer(
         if (deletedRes && deletedRes.data && !deletedRes.errors)
             return { error: null, ok: true };
         this.pveLogger.error(
-            `LXC container could not be deleted - ${deletedRes.errors
-                .getValues()
-                .join(' - ')}`
+            `LXC container could not be deleted - ${deletedRes.errors.join(
+                ' - '
+            )}`
         );
         return { error: 'Could not delete container in proxmox', ok: false };
     } catch (error) {
@@ -220,15 +217,15 @@ export async function deleteContainer(
 export async function getFreeIP(
     this: ProxmoxConnection
 ): Promise<SQLIP | null> {
-    const sql: string = `SELECT * FROM ips WHERE used = 0 LIMIT 1`;
+    const sql = `SELECT * FROM ips WHERE used = 0 LIMIT 1`;
     const result: SQLIP = await this.mySQLClient.getFirstQueryResult(sql);
     if (!result) return null;
     return result;
 }
 
 export async function getIPs(this: ProxmoxConnection): Promise<SQLIP[]> {
-    const sql: string = 'SELECT * FROM ips';
-    const res: any[] = await this.mySQLClient.getQueryResult(sql);
+    const sql = 'SELECT * FROM ips';
+    const res: SQLIP[] = await this.mySQLClient.getQueryResult(sql);
     if (!res) return null;
     const ips: SQLIP[] = res.map((ip: SQLIP) => {
         return { ...ip, used: !!ip.used };
@@ -262,7 +259,7 @@ export async function getIP(
     this: ProxmoxConnection,
     ipv4: string
 ): Promise<SQLIP | null> {
-    const sql: string = `SELECT * FROM ips WHERE ipv4 = ?`;
+    const sql = `SELECT * FROM ips WHERE ipv4 = ?`;
     const result: SQLIP = await this.mySQLClient.getFirstQueryResult(sql, [
         ipv4,
     ]);
@@ -275,7 +272,7 @@ export async function updateIPUsedStatus(
     ip: SQLIP,
     status: boolean
 ): Promise<void> {
-    const sql: string = `UPDATE ips SET used = ? WHERE ipv4 = ?`;
+    const sql = `UPDATE ips SET used = ? WHERE ipv4 = ?`;
     await this.mySQLClient.executeQuery(sql, [Number(status), ip.ipv4]);
 }
 
@@ -322,7 +319,7 @@ export async function createContainerInProxmox(
     }
 ): Promise<ActionResult> {
     try {
-        const nextIDRes = await this.call('cluster/nextid', 'GET');
+        const nextIDRes = await this.call<string>('cluster/nextid', 'GET');
         const nextID: string = nextIDRes.data;
         if (!nextID) {
             this.pveLogger.error(`Couldn't find LXC container ID`);
@@ -349,13 +346,11 @@ export async function createContainerInProxmox(
             this.pveLogger.info(
                 `LXC container with ID ${nextID} has been created successfully`
             );
-            await this.addCotainerToDatabase(Number(nextID), ip.ipv4, node);
+            await this.addCotainerToDatabase(Number(nextID), ip.ipv4);
             return { error: null, ok: true };
         }
         this.pveLogger.error(
-            `LXC container could not be created - ${res.errors
-                .getValues()
-                .join(' - ')}`
+            `LXC container could not be created - ${res.errors.join(' - ')}`
         );
         return { error: 'Could not create container in proxmox', ok: false };
     } catch (err) {
@@ -367,8 +362,7 @@ export async function createContainerInProxmox(
 export async function addCotainerToDatabase(
     this: ProxmoxConnection,
     id: number,
-    ipv4: string,
-    node: string
+    ipv4: string
 ): Promise<void> {
     const sql = `INSERT INTO cts (id, ipv4) VALUES (?, ?)`;
     await this.mySQLClient.executeQuery(sql, [id, ipv4]);
@@ -378,7 +372,13 @@ export async function getNodeIP(
     this: ProxmoxConnection,
     node: string
 ): Promise<string> {
-    const data: ClusterNode[] = await this.call('cluster/status', 'GET');
+    const { data }: { data?: ClusterNode[] } = await this.call(
+        'cluster/status',
+        'GET'
+    );
+
+    if (!data) return null;
+
     return data.find((x) => x.name == node).ip;
 }
 
@@ -387,7 +387,7 @@ export async function checkIfNodeIsFine(
     nodename: string
 ): Promise<boolean> {
     const nodes: Node[] = await this.getNodes();
-    let node: Node = nodes.find((x) => x.node == nodename);
+    const node: Node = nodes.find((x) => x.node == nodename);
     if (node) {
         if (node.type !== 'node') return false;
         if (node.status == 'offline' || node.status == 'unknown') return false;
@@ -403,7 +403,7 @@ export async function getFirstFineNode(
     this: ProxmoxConnection,
     nodes: SQLNode[]
 ) {
-    for (let node of nodes) {
+    for (const node of nodes) {
         if (await this.checkIfNodeIsFine(node.nodename)) return node.nodename;
     }
 
@@ -415,7 +415,7 @@ export async function getNodeByLocation(
     location: string
 ): Promise<string> {
     const query = 'SELECT * FROM nodes WHERE location = ?';
-    let nodes: SQLNode[] = await this.mySQLClient.getQueryResult(query, [
+    const nodes: SQLNode[] = await this.mySQLClient.getQueryResult(query, [
         location,
     ]);
 
@@ -441,9 +441,12 @@ export async function getContainerIP(
 ): Promise<string> {
     const nodename = await this.getNodeOfContainer(id);
     if (!nodename) return null;
-    let ctConfig = await this.call(`nodes/${nodename}/lxc/${id}/config`, 'GET');
+    const { data: ctConfig }: { data?: LXC } = await this.call(
+        `nodes/${nodename}/lxc/${id}/config`,
+        'GET'
+    );
     // net config for example "net0": "name=eth0,bridge=vmbr0,firewall=1,gw=195.133.95.1,hwaddr=2E:EA:FA:B4:21:47,ip=195.133.95.121/24,type=veth"
-    const netConf = ctConfig.data.net0;
+    const netConf = ctConfig.net0;
     return netConf?.split('ip=')?.[1]?.split('/')?.[0] || null;
 }
 
@@ -453,12 +456,15 @@ export async function getContainerInfo(
 ): Promise<LXC> {
     const nodename = await this.getNodeOfContainer(id);
     if (!nodename) return null;
-    let ctConfig = await this.call(`nodes/${nodename}/lxc/${id}/config`, 'GET');
-    if (!ctConfig.data) return null;
-    if (ctConfig.data.unprivileged != null)
-        ctConfig.data.unprivileged = !!ctConfig.data.unprivileged;
-    const containerData: LXC = ctConfig.data;
-    return containerData;
+    const { data: ctConfig }: { data?: LXC } = await this.call<LXC>(
+        `nodes/${nodename}/lxc/${id}/config`,
+        'GET'
+    );
+    if (!ctConfig) return null;
+    if (ctConfig.unprivileged != null)
+        ctConfig.unprivileged = !!ctConfig.unprivileged;
+
+    return ctConfig;
 }
 
 export async function getContainerStatus(
@@ -467,15 +473,15 @@ export async function getContainerStatus(
 ): Promise<ContainerStatus> {
     const nodename = await this.getNodeOfContainer(id);
     if (!nodename) return null;
-    let ctConfig = await this.call(
+    const { data: ctStatus } = await this.call<ContainerStatus>(
         `nodes/${nodename}/lxc/${id}/status/current`,
         'GET'
     );
-    if (!ctConfig.data) return null;
-    if (ctConfig.data.ha?.managed != null)
-        ctConfig.data.ha.managed = !!ctConfig.data.ha.managed;
-    const containerData: ContainerStatus = ctConfig.data;
-    return containerData;
+    if (!ctStatus) return null;
+    if (ctStatus.ha?.managed != null)
+        ctStatus.ha.managed = !!ctStatus.ha.managed;
+
+    return ctStatus;
 }
 
 export async function changeContainerStatus(
@@ -486,8 +492,8 @@ export async function changeContainerStatus(
     try {
         const nodename = await this.getNodeOfContainer(containerID);
         if (!nodename) return null;
-        let ctConfig = (
-            await this.call(
+        const ctConfig = (
+            await this.call<string>(
                 `nodes/${nodename}/lxc/${containerID}/status/${status}`,
                 'POST'
             )
@@ -540,16 +546,4 @@ export async function getContainerStatuses(
         if (containerData) containerStatuses.push(containerData);
     }
     return containerStatuses;
-}
-
-export async function getVNCTicket(
-    this: ProxmoxConnection,
-    id: number
-): Promise<VNCTicket> {
-    const node = await this.getNodeOfContainer(id);
-    if (!node) return null;
-    const res = await this.call(`nodes/${node}/lxc/${id}/vncproxy`, 'POST');
-    if (!res.data) return null;
-    const ticket: VNCTicket = res.data;
-    return ticket;
 }

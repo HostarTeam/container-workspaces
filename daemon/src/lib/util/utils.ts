@@ -26,7 +26,7 @@ export function printSuccess(message): void {
 }
 
 export async function readConfFile(): Promise<Configuration> {
-    const fileLocation: string = '/etc/container-workspaces/conf.json';
+    const fileLocation = '/etc/container-workspaces/conf.json';
     let fileContent = '';
     try {
         fileContent = await readFileSync(fileLocation, 'utf8');
@@ -61,13 +61,13 @@ export async function checkIP(
 ): Promise<boolean> {
     const sql = 'SELECT ipv4 from cts';
     const cts: CT[] = await this.mySQLClient.getQueryResult(sql);
-    let ips: string[] = cts.map((x) => x['ipv4']);
+    const ips: string[] = cts.map((x) => x['ipv4']);
 
     return ips.includes(ip);
 }
 
 export function createLoggers(logsName: string[], logDir: string): Log4js {
-    let confObj = {
+    const confObj = {
         appenders: {
             all: {
                 type: 'console',
@@ -100,11 +100,11 @@ export function sleep(ms: number): Promise<void> {
 }
 
 export function generatePassword(length: number): string {
-    var result: string = '';
-    var characters: string =
+    let result = '';
+    const characters =
         'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    var charactersLength: number = characters.length;
-    for (var i = 0; i < length; i++) {
+    const charactersLength: number = characters.length;
+    for (let i = 0; i < length; i++) {
         result += characters.charAt(
             Math.floor(Math.random() * charactersLength)
         );

@@ -5,7 +5,7 @@ import ContainerWorkspaces from './ContainerWorkspaces';
 // Main function of the application, runs the daemon
 async function main() {
     const config: Configuration = await readConfFile();
-    const currentServer: ContainerWorkspaces = new ContainerWorkspaces(config);
+    new ContainerWorkspaces(config);
 }
 
 main();

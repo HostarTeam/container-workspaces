@@ -190,10 +190,9 @@ export interface ContainerStatus {
     vmid: number; // Represents the container id.
 }
 
-export interface ProxmoxResponse {
-    data?: any;
+export interface ProxmoxResponse<T> {
+    data?: T;
     errors?: string[];
-    [key: string]: any;
 }
 
 export type status =
@@ -222,15 +221,9 @@ export interface Config {
     init_commands: string[];
 }
 
-export interface VNCTicket {
-    ticket: string;
-    user: string;
-    port: string;
-    upid: string;
-    cert?: string;
-}
-
 export interface SQLClient {
     client_id?: number;
     client_secret?: string;
 }
+
+export type valueParam = string | number | Array<string | number>;

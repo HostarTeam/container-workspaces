@@ -2,11 +2,9 @@ import {
     Connection,
     ConnectionOptions,
     createConnection,
-    OkPacket,
-    ResultSetHeader,
     RowDataPacket,
 } from 'mysql2';
-
+import { valueParam } from '../typing/types';
 class MySQLClient {
     private connection: Connection;
 
@@ -25,30 +23,31 @@ class MySQLClient {
             });
         });
     }
-
+    /* eslint-disable */
     public getQueryResult(
         sql: string,
-        values: any[] | any = []
+        values: valueParam = []
     ): Promise<any[]> {
         return new Promise((resolve, reject) => {
-            this.connection.query(sql, values, (err, results) => {
+            this.connection.query(sql, values, (err, rows: RowDataPacket[]) => {
                 if (err) return reject(err);
-                else return resolve(<any[]>results);
+                else return resolve(rows);
             });
         });
     }
 
     public async getFirstQueryResult(
         sql: string,
-        values: any[] | any = []
+        values: valueParam = []
     ): Promise<any> {
         const rows = await this.getQueryResult(sql, values);
         return rows[0] || null;
     }
+    /* eslint-enable */
 
     public async executeQuery(
         sql: string,
-        values: any[] | any = []
+        values: valueParam = []
     ): Promise<void> {
         await this.getQueryResult(sql, values);
     }
