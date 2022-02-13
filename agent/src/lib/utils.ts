@@ -1,14 +1,14 @@
-import { existsSync, fstat, mkdirSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { AgentConfiguration } from './typing/types';
 import { execSync } from 'child_process';
 import os from 'os';
 
 export function generatePassword(length: number): string {
-    var result: string = '';
-    var characters: string =
+    let result = '';
+    const characters =
         'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    var charactersLength: number = characters.length;
-    for (var i = 0; i < length; i++) {
+    const charactersLength = characters.length;
+    for (let i = 0; i < length; i++) {
         result += characters.charAt(
             Math.floor(Math.random() * charactersLength)
         );
@@ -53,7 +53,7 @@ export async function readConfFile(
     }
 }
 
-export function getLastLines(logFilePath: string, lines: number = 100): string {
+export function getLastLines(logFilePath: string, lines = 100): string {
     const stdout = execSync(`tail -n ${lines} ${logFilePath}`, {
         encoding: 'utf8',
     });

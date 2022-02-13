@@ -6,6 +6,7 @@ import { handleMessage } from './ws/handleMessage';
 import { wsCommand } from './ws/wsCommand';
 import { Task } from './lib/typing/Task';
 import passwd from 'passwd-linux';
+import { MessageDataResponse } from './lib/typing/MessageData';
 
 export default class Agent {
     public ws: WebSocket;
@@ -20,7 +21,7 @@ export default class Agent {
         this.initWebSocket();
     }
 
-    private initWebSocket(isReconnection: boolean = false): void {
+    private initWebSocket(isReconnection = false): void {
         this.ws = new WebSocket(this.config.socketServer);
 
         this.ws.on('open', () => {
@@ -52,17 +53,18 @@ export default class Agent {
 
     private reconnectToWS(): void {
         clearTimeout(this.reconnectInterval);
+        this.ws.close();
         this.reconnectInterval = setTimeout(
             () => this.initWebSocket(true),
             10000
         ); // Wait 10 seconds before reconnecting
     }
 
-    public sendData(data: any): void {
+    public sendData(data: MessageDataResponse): void {
         this.ws.send(JSON.stringify(data));
     }
 
-    private configureLogger(location: string = '/var/log/cw/agent.log'): void {
+    private configureLogger(location = '/var/log/cw/agent.log'): void {
         this.logger = log4js
             .configure({
                 appenders: {

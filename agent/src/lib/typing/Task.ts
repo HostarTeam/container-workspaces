@@ -41,7 +41,7 @@ interface TaskOptions {
     ipaddr: string;
     start_time?: Date | number;
     end_time?: Date | number;
-    data: any | string;
+    data: MessageDataResponse | string;
     status?: Task['status'];
     error?: Task['error'];
 }

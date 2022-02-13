@@ -18,7 +18,7 @@ async function main(): Promise<void> {
             const initAgent = new InitAgent();
             await initAgent.runInit();
         } catch (err: unknown) {
-            printError(<String>err);
+            printError(String(err));
             printFatal('Could not finish executing init agent');
         }
     }

@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { exec, ExecException } from 'child_process';
 import Agent from '../Agent';
 import { CommandErrorReport, ErrorReport } from '../lib/typing/types';
 import { MessageDataResponse } from '../lib/typing/MessageData';
@@ -9,11 +9,17 @@ export default class MessageRouting {
     [key: string]: (agent: Agent, task: Task) => Promise<void>;
 
     public static async shell_exec(agent: Agent, task: Task): Promise<void> {
-        const commands: string = task.data.args.commands;
+        const commands: string[] = task.data.args.commands;
         for (const command of commands) {
+            let repstdout = '';
+            let repstderr = '';
             try {
-                await execSync(command, {
-                    stdio: 'pipe',
+                exec(command, (error, stdout, stderr) => {
+                    if (error) {
+                        repstdout = stdout;
+                        repstderr = stderr;
+                        throw error;
+                    }
                 });
 
                 agent.logger.info(`Executed command ${command}`);
@@ -28,30 +34,32 @@ export default class MessageRouting {
                     });
 
                 agent.sendData(clientCommand);
-            } catch (err: any) {
-                const errorReport: CommandErrorReport = {
-                    command,
-                    stderr: err.stderr.toString(),
-                    stdout: err.stdout.toString(),
-                    exitCode: err.status,
-                    stack: err.stack,
-                    message: err.message,
-                };
+            } catch (err: unknown) {
+                if (err instanceof Error) {
+                    const errorReport: CommandErrorReport = {
+                        command,
+                        stderr: repstderr,
+                        stdout: repstdout,
+                        exitCode: (<ExecException>err).code,
+                        stack: err.stack,
+                        message: err.message,
+                    };
 
-                agent.logger.error(
-                    `Failed executing command ${command} - ${JSON.stringify(
-                        errorReport
-                    )}`
-                );
+                    agent.logger.error(
+                        `Failed executing command ${command} - ${JSON.stringify(
+                            errorReport
+                        )}`
+                    );
 
-                const clientCommand: MessageDataResponse =
-                    new MessageDataResponse({
-                        taskid: task.id,
-                        action: 'shell_exec',
-                        args: { status: 'error', errorReport },
-                    });
+                    const clientCommand: MessageDataResponse =
+                        new MessageDataResponse({
+                            taskid: task.id,
+                            action: 'shell_exec',
+                            args: { status: 'error', errorReport },
+                        });
 
-                agent.sendData(clientCommand);
+                    agent.sendData(clientCommand);
+                }
             }
         }
     }

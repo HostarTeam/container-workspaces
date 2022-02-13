@@ -36,7 +36,7 @@ interface possibleArgs {
     linesCount?: number;
     password?: string;
     errorReport?: CommandError;
-    lines?: string[] | null;
+    lines?: string | null;
     status?: 'success' | 'error';
 }
 

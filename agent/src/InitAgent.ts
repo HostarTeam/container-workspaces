@@ -1,5 +1,5 @@
 import { AgentConfiguration, CommandErrorReport } from './lib/typing/types';
-import { execSync } from 'child_process';
+import { exec, ExecException } from 'child_process';
 import { mkdirSync, writeFileSync } from 'fs';
 import fetch, { Response } from 'node-fetch';
 import log4js, { Logger } from 'log4js';
@@ -27,7 +27,7 @@ export default class InitAgent {
         this.logger.info('Running init agent');
     }
 
-    private writeConfig(location: string = '/etc/cw/defaultconf.json'): void {
+    private writeConfig(location = '/etc/cw/defaultconf.json'): void {
         mkdirSync(location.split('/').slice(0, -1).join('/'), {
             recursive: true,
         });
@@ -60,27 +60,41 @@ export default class InitAgent {
         apiServer: string
     ): Promise<void | never> {
         for (const command of commands) {
+            let repstdout = '';
+            let repstderr = '';
             try {
-                execSync(command, {
-                    stdio: 'pipe',
+                exec(command, (error, stdout, stderr) => {
+                    if (error) {
+                        repstdout = stdout;
+                        repstderr = stderr;
+                        throw error;
+                    }
                 });
             } catch (err: unknown) {
-                await this.reportCommandErrors(command, err, apiServer);
-                process.exit(1);
+                if (err instanceof Error)
+                    this.reportCommandErrors(
+                        command,
+                        err,
+                        { stdout: repstdout, stderr: repstderr },
+                        apiServer
+                    ).then(() => {
+                        process.exit(1);
+                    });
             }
         }
     }
 
     private async reportCommandErrors(
         command: string,
-        errorData: any,
+        errorData: ExecException,
+        { stdout, stderr }: { stdout: string; stderr: string },
         apiServer: string
     ): Promise<void> {
         const report: CommandErrorReport = {
             command,
-            stderr: errorData.stderr.toString(),
-            stdout: errorData.stdout.toString(),
-            exitCode: errorData.status,
+            stderr: stderr,
+            stdout: stdout,
+            exitCode: errorData.code,
             stack: errorData.stack,
             message: errorData.message,
         };
@@ -97,9 +111,7 @@ export default class InitAgent {
         writeFileSync(location, '1');
     }
 
-    private configureLogger(
-        location: string = '/var/log/cw/initagent.log'
-    ): void {
+    private configureLogger(location = '/var/log/cw/initagent.log'): void {
         this.logger = log4js
             .configure({
                 appenders: {

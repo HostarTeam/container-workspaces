@@ -115,7 +115,6 @@ export default class ContainerWorkspaces {
                 const isAuthorized: boolean = await this.checkIP(
                     request.socket.remoteAddress
                 );
-
                 if (isAuthorized) this.wss.emit('connection', socket, request);
                 else socket.close();
             });

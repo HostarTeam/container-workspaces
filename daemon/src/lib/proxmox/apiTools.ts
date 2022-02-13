@@ -63,9 +63,7 @@ export async function call<T>(
 }
 
 export async function getNodes(this: ProxmoxConnection): Promise<Node[]> {
-    const { data: PVENodes }: { data?: Node[] } = (
-        await this.call('nodes', 'GET')
-    ).data;
+    const { data: PVENodes } = await this.call<Node[]>('nodes', 'GET');
     const sql = 'SELECT nodename FROM nodes';
     const SQLNodes: SQLNode[] = await this.mySQLClient.getQueryResult(sql);
     const SQLNodenames: string[] = SQLNodes.map((node) => node.nodename);
@@ -168,7 +166,7 @@ export async function getAuthKeys(this: ProxmoxConnection): Promise<void> {
                 method: 'POST',
             }
         );
-        const data = await res.json();
+        const { data } = await res.json();
         this.authCookie = data.ticket;
         this.csrfPreventionToken = data.CSRFPreventionToken;
     } catch (error) {
