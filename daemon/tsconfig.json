@@ -1,11 +1,11 @@
 {
     "compilerOptions": {
-        "target": "ES6",
+        "target": "ES5",
         "rootDir": "src/",
         "outDir": "dist/",
+        "importHelpers": false,
         "moduleResolution": "node",
         "esModuleInterop": true,
-        "resolveJsonModule": true,
         "allowSyntheticDefaultImports": true,
         "importsNotUsedAsValues": "remove",
         "removeComments": true
