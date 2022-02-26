@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { Configuration, CT, SQLClient } from '../typing/types';
+import { Configuration, SQLClient } from '../typing/types';
 import { Handler, NextFunction, Request, Response } from 'express';
 import ProxmoxConnection from '../proxmox/ProxmoxConnection';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
@@ -60,7 +60,7 @@ export async function checkIP(
     ip: string
 ): Promise<boolean> {
     const sql = 'SELECT ipv4 from cts';
-    const cts: CT[] = await this.mySQLClient.getQueryResult(sql);
+    const cts: { ipv4?: string }[] = await this.mySQLClient.getQueryResult(sql);
     const ips: string[] = cts.map((x) => x['ipv4']);
 
     return ips.includes(ip);

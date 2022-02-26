@@ -20,6 +20,7 @@
     },
     "homepage": "https://github.com/ubarilan/container-workspaces#readme",
     "dependencies": {
+        "@hostarteam/mysqlclient": "^1.0.6",
         "bcrypt": "^5.0.1",
         "cors": "^2.8.5",
         "express": "^4.17.2",

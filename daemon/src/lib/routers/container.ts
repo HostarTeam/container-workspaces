@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
+import Task from '../entities/Task';
 import { MessageData } from '../typing/MessageData';
-import { Task } from '../typing/Task';
 import { ActionResult, ContainerStatus, LXC } from '../typing/types';
 import { requireBodyProps, validatePassword } from '../util/utils';
 import { ClientNotFoundError } from '../ws/commandAgent';

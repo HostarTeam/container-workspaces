@@ -1,5 +1,5 @@
 import ContainerWorkspaces from '../../ContainerWorkspaces';
-import { Task } from '../typing/Task';
+import Task from '../entities/Task';
 
 export async function sendTaskToAgent(
     this: ContainerWorkspaces,

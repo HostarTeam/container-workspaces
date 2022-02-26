@@ -1,8 +1,9 @@
 import { Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
-import { SQLIP, SQLNode } from '../typing/types';
 import { requireBodyProps } from '../util/utils';
-import { CTOptions } from '../typing/options';
+import { CTHardwareOptions } from '../typing/options';
+import SQLIP from '../entities/SQLIP';
+import SQLNode from '../entities/SQLNode';
 
 export function initConfigRouter(this: ContainerWorkspaces): void {
     this.configRouter = Router();
@@ -37,12 +38,14 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
                 });
             } else {
                 const nodeIP = await this.proxmoxClient.getNodeIP(nodename);
-                await this.proxmoxClient.addNodeToDatabase({
-                    nodename,
-                    is_main,
-                    ip: nodeIP,
-                    location,
-                });
+                await this.proxmoxClient.addNodeToDatabase(
+                    new SQLNode({
+                        nodename,
+                        is_main,
+                        ip: nodeIP,
+                        location,
+                    })
+                );
                 res.status(201).send({
                     status: 'created',
                     message: 'Node added successfully',
@@ -127,12 +130,14 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
                     message: 'IP already exists in the database',
                 });
             } else {
-                await this.proxmoxClient.addIPToDatabase({
-                    ipv4,
-                    gateway,
-                    netmask,
-                    used: false,
-                });
+                await this.proxmoxClient.addIPToDatabase(
+                    new SQLIP({
+                        ipv4,
+                        gateway,
+                        netmask,
+                        used: false,
+                    })
+                );
                 res.status(201).send({
                     status: 'created',
                     message: 'IP added successfully',
@@ -171,12 +176,14 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
                 });
             } else {
                 for (const ipv4 of ipv4sToAdd) {
-                    await this.proxmoxClient.addIPToDatabase({
-                        ipv4,
-                        gateway,
-                        netmask,
-                        used: false,
-                    });
+                    await this.proxmoxClient.addIPToDatabase(
+                        new SQLIP({
+                            ipv4,
+                            gateway,
+                            netmask,
+                            used: false,
+                        })
+                    );
                 }
                 res.status(201).send({
                     status: 'created',
@@ -212,7 +219,7 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
      * This route is used in order to get the ct options
      */
     router.get('/ctoptions', async (req: Request, res: Response) => {
-        const ctOptions: CTOptions = await this.getCTOptions();
+        const ctOptions: CTHardwareOptions = await this.getCTHardwareOptions();
 
         if (ctOptions) res.send(ctOptions);
         else
@@ -230,7 +237,7 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
         '/ctoptions',
         requireBodyProps('ct_options'),
         async (req: Request, res: Response) => {
-            const ctOptions: CTOptions = req.body.ct_options;
+            const ctOptions: CTHardwareOptions = req.body.ct_options;
             await this.udpateCTOptions(ctOptions);
             res.send({
                 status: 'ok',

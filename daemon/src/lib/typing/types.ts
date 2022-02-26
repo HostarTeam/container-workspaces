@@ -1,5 +1,5 @@
 import MessageRouting from '../ws/routing/MessageRouting';
-import { CTOptions } from './options';
+import { CTHardwareOptions } from './options';
 
 export interface Configuration {
     apiKey: string;
@@ -146,14 +146,6 @@ export interface ClusterNode {
     quorate?: 0 | 1;
 }
 
-export interface SQLNode {
-    id?: number;
-    nodename: string;
-    is_main: boolean;
-    ip: string;
-    location: string;
-}
-
 declare global {
     namespace Express {
         interface Request {
@@ -203,21 +195,13 @@ export type status =
     | 'resume'
     | 'reboot';
 
-export interface SQLIP {
-    id?: number;
-    ipv4: string;
-    gateway: string;
-    netmask: string;
-    used: boolean;
-}
-
 export interface ActionResult {
     error: null | string;
     ok: boolean;
 }
 
 export interface Config {
-    ct_options: CTOptions;
+    ct_options: CTHardwareOptions;
     init_commands: string[];
 }
 

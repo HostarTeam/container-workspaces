@@ -1,4 +1,4 @@
-export interface CTOptions {
+export interface CTHardwareOptions {
     ct_cores: number;
     ct_disk: number;
     ct_ram: number;

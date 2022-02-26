@@ -5,15 +5,15 @@ import {
     ActionResult,
     ClusterNode,
     ContainerStatus,
-    CT,
     LXC,
     Node,
     ProxmoxResponse,
-    SQLIP,
-    SQLNode,
     status,
 } from '../typing/types';
-import { CraeteCTOptions, CTOptions } from '../typing/options';
+import { CraeteCTOptions, CTHardwareOptions } from '../typing/options';
+import SQLNode from '../entities/SQLNode';
+import CT from '../entities/CT';
+import SQLIP from '../entities/SQLIP';
 
 export async function call<T>(
     this: ProxmoxConnection,
@@ -65,7 +65,9 @@ export async function call<T>(
 export async function getNodes(this: ProxmoxConnection): Promise<Node[]> {
     const { data: PVENodes } = await this.call<Node[]>('nodes', 'GET');
     const sql = 'SELECT nodename FROM nodes';
-    const SQLNodes: SQLNode[] = await this.mySQLClient.getQueryResult(sql);
+    const SQLNodes: SQLNode[] = SQLNode.fromObjects(
+        await this.mySQLClient.getQueryResult(sql)
+    );
     const SQLNodenames: string[] = SQLNodes.map((node) => node.nodename);
     const nodes = PVENodes.filter((node) => SQLNodenames.includes(node.node));
     return nodes;
@@ -87,12 +89,11 @@ export async function getPVENode(
 
 export async function getSQLNodes(this: ProxmoxConnection): Promise<SQLNode[]> {
     const sql = 'SELECT * FROM nodes';
-    const res: SQLNode[] = await this.mySQLClient.getQueryResult(sql);
+    const res: SQLNode[] = SQLNode.fromObjects(
+        await this.mySQLClient.getQueryResult(sql)
+    );
     if (res.length < 1) return null;
-    const nodes: SQLNode[] = res.map((node: SQLNode) => {
-        return { ...node, is_main: !!node.is_main };
-    });
-    return nodes;
+    return res;
 }
 
 export async function getSQLNode(
@@ -100,9 +101,8 @@ export async function getSQLNode(
     nodename: string
 ): Promise<SQLNode> {
     const sql = 'SELECT * FROM nodes WHERE nodename = ?';
-    const node: SQLNode = await this.mySQLClient.getFirstQueryResult(
-        sql,
-        nodename
+    const node: SQLNode = SQLNode.fromObject(
+        await this.mySQLClient.getFirstQueryResult(sql, nodename)
     );
     if (!node) return null;
     node.is_main = !!node.is_main;
@@ -133,7 +133,9 @@ export async function removeNodeFromDatabase(
 
 export async function getLocations(this: ProxmoxConnection): Promise<string[]> {
     const sql = 'SELECT DISTINCT location FROM nodes';
-    const res: SQLNode[] = await this.mySQLClient.getQueryResult(sql);
+    const res: SQLNode[] = SQLNode.fromObjects(
+        await this.mySQLClient.getQueryResult(sql)
+    );
 
     return res.map((node: SQLNode) => node.location);
 }
@@ -216,19 +218,20 @@ export async function getFreeIP(
     this: ProxmoxConnection
 ): Promise<SQLIP | null> {
     const sql = `SELECT * FROM ips WHERE used = 0 LIMIT 1`;
-    const result: SQLIP = await this.mySQLClient.getFirstQueryResult(sql);
+    const result: SQLIP = SQLIP.fromObject(
+        await this.mySQLClient.getFirstQueryResult(sql)
+    );
     if (!result) return null;
     return result;
 }
 
 export async function getIPs(this: ProxmoxConnection): Promise<SQLIP[]> {
     const sql = 'SELECT * FROM ips';
-    const res: SQLIP[] = await this.mySQLClient.getQueryResult(sql);
+    const res: SQLIP[] = SQLIP.fromObjects(
+        await this.mySQLClient.getQueryResult(sql)
+    );
     if (!res) return null;
-    const ips: SQLIP[] = res.map((ip: SQLIP) => {
-        return { ...ip, used: !!ip.used };
-    });
-    return ips;
+    return res;
 }
 
 export async function addIPToDatabase(
@@ -258,9 +261,9 @@ export async function getIP(
     ipv4: string
 ): Promise<SQLIP | null> {
     const sql = `SELECT * FROM ips WHERE ipv4 = ?`;
-    const result: SQLIP = await this.mySQLClient.getFirstQueryResult(sql, [
-        ipv4,
-    ]);
+    const result: SQLIP = SQLIP.fromObject(
+        await this.mySQLClient.getFirstQueryResult(sql, [ipv4])
+    );
 
     return result; // Return value null if no IP was found
 }
@@ -278,10 +281,7 @@ export async function createContainer(
     this: ProxmoxConnection,
     { location, template, password }: CraeteCTOptions
 ): Promise<ActionResult> {
-    const sql = `SELECT * FROM config`;
-    const config = JSON.parse(
-        (await this.mySQLClient.getFirstQueryResult(sql))['config']
-    );
+    const config = this.cw.getConfig();
 
     const node = await this.getNodeByLocation(location);
     const options = config['ct_options'];
@@ -309,7 +309,7 @@ export async function createContainerInProxmox(
         ip,
         password,
     }: {
-        options: CTOptions;
+        options: CTHardwareOptions;
         node: string;
         template: string;
         ip: SQLIP;
@@ -413,9 +413,9 @@ export async function getNodeByLocation(
     location: string
 ): Promise<string> {
     const query = 'SELECT * FROM nodes WHERE location = ?';
-    const nodes: SQLNode[] = await this.mySQLClient.getQueryResult(query, [
-        location,
-    ]);
+    const nodes: SQLNode[] = SQLNode.fromObjects(
+        await this.mySQLClient.getQueryResult(query, [location])
+    );
 
     return await this.getFirstFineNode(nodes);
 }
@@ -523,25 +523,29 @@ export async function setCTAsReady(
 }
 
 export async function getContainers(this: ProxmoxConnection): Promise<LXC[]> {
-    const containers: LXC[] = [];
+    const containersAsPromises: Promise<LXC>[] = [];
     const sql = 'SELECT * FROM cts';
-    const cts: CT[] = await this.mySQLClient.getQueryResult(sql);
+    const cts: CT[] = CT.fromObjects(
+        await this.mySQLClient.getQueryResult(sql)
+    );
     for (const ct of cts) {
-        const containerData = await this.getContainerInfo(ct.id);
-        if (containerData) containers.push(containerData);
+        const containerData = this.getContainerInfo(ct.id);
+        if (containerData) containersAsPromises.push(containerData);
     }
-    return containers;
+    return await Promise.all(containersAsPromises);
 }
 
 export async function getContainerStatuses(
     this: ProxmoxConnection
 ): Promise<ContainerStatus[]> {
-    const containerStatuses: ContainerStatus[] = [];
+    const containerStatusesAsPromises: Promise<ContainerStatus>[] = [];
     const sql = 'SELECT * FROM cts';
-    const cts: CT[] = await this.mySQLClient.getQueryResult(sql);
+    const cts: CT[] = CT.fromObjects(
+        await this.mySQLClient.getQueryResult(sql)
+    );
     for (const ct of cts) {
-        const containerData = await this.getContainerStatus(ct.id);
-        if (containerData) containerStatuses.push(containerData);
+        const containerData = this.getContainerStatus(ct.id);
+        if (containerData) containerStatusesAsPromises.push(containerData);
     }
-    return containerStatuses;
+    return await Promise.all(containerStatusesAsPromises);
 }

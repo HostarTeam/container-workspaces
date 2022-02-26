@@ -16,16 +16,16 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { handleMessage } from './lib/ws/wsMessageHandler';
 import { wsCommand } from './lib/ws/routing/wsCommand';
 import { sendTaskToAgent } from './lib/ws/commandAgent';
-import { Task } from './lib/typing/Task';
-import { Config, status, Configuration, CT } from './lib/typing/types';
+import { Config, status, Configuration } from './lib/typing/types';
 import { MessageData } from './lib/typing/MessageData';
 import { initConfigRouter } from './lib/routers/config';
-import { CTOptions } from './lib/typing/options';
+import { CTHardwareOptions } from './lib/typing/options';
 import setupHttp from './http';
 import httpLoggerMiddleware from './lib/middleware/logging';
 import authMiddleware from './lib/middleware/auth';
-import { ConnectionOptions } from 'mysql2';
-import MySQLClient from './lib/database/MySQLClient';
+import { MySQLClient, ConnectionOptions } from '@hostarteam/mysqlclient';
+import CT from './lib/entities/CT';
+import Task from './lib/entities/Task';
 
 export default class ContainerWorkspaces {
     protected httpServer: Server;
@@ -95,6 +95,7 @@ export default class ContainerWorkspaces {
             password: PVEConf.password,
             pveLogger: this.pveLogger,
             mySQLClient: this.mySQLClient,
+            cw: this,
         });
     }
 
@@ -154,7 +155,7 @@ export default class ContainerWorkspaces {
         const sql = 'SELECT * FROM tasks WHERE id = ?';
         const result = await this.mySQLClient.getFirstQueryResult(sql, [id]);
         if (!result) return null;
-        const task = new Task(result);
+        const task = Task.fromObject(result);
         return task;
     }
 
@@ -175,7 +176,7 @@ export default class ContainerWorkspaces {
     }
 
     public async errorTask(taskid: Task['id'], error: Error): Promise<void> {
-        const erroredTask = new Task(await this.getTask(taskid));
+        const erroredTask = await this.getTask(taskid);
         erroredTask.status = 'error';
         erroredTask.error = error.message;
 
@@ -183,7 +184,7 @@ export default class ContainerWorkspaces {
     }
 
     public async finishTask(taskid: Task['id']): Promise<void> {
-        const finishedTask = new Task(await this.getTask(taskid));
+        const finishedTask = await this.getTask(taskid);
         finishedTask.status = 'OK';
         finishedTask.end_time = Date.now();
 
@@ -293,11 +294,11 @@ export default class ContainerWorkspaces {
         };
     }
 
-    private async getConfig(): Promise<Config> {
+    public async getConfig(): Promise<Config> {
         const sql = 'SELECT * FROM config';
         const result = await this.mySQLClient.getFirstQueryResult(sql);
         if (!result) return null;
-        const config: Config = JSON.parse(result.config);
+        const config: Config = JSON.parse(String(result.config));
         return config;
     }
 
@@ -306,12 +307,12 @@ export default class ContainerWorkspaces {
         await this.mySQLClient.executeQuery(sql, [JSON.stringify(config)]);
     }
 
-    protected async getCTOptions(): Promise<CTOptions> {
+    protected async getCTHardwareOptions(): Promise<CTHardwareOptions> {
         const config = await this.getConfig();
         return config['ct_options'];
     }
 
-    protected async udpateCTOptions(options: CTOptions): Promise<void> {
+    protected async udpateCTOptions(options: CTHardwareOptions): Promise<void> {
         const config = await this.getConfig();
         config['ct_options'] = options;
 
@@ -332,9 +333,10 @@ export default class ContainerWorkspaces {
 
     protected async getContainerID(ip: string): Promise<number | null> {
         const sql = 'SELECT id FROM cts WHERE ipv4 = ?';
-        const result: CT = await this.mySQLClient.getFirstQueryResult(sql, ip);
+        const result = await this.mySQLClient.getFirstQueryResult(sql, ip);
         if (!result) return null;
-        return result.id;
+        const ct = CT.fromObject(result);
+        return ct.id;
     }
 
     private async connectDatabase(connectionConfig: ConnectionOptions) {

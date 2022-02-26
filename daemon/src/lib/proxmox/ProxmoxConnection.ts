@@ -1,7 +1,8 @@
+import { MySQLClient } from '@hostarteam/mysqlclient';
 import { Logger } from 'log4js';
 import { httpProtocol } from '../typing/types';
-import MySQLClient from '../database/MySQLClient';
 import { getNodesName, printSuccess } from '../util/utils';
+import ContainerWorkspaces from '../../ContainerWorkspaces';
 import {
     addCotainerToDatabase,
     addIPToDatabase,
@@ -48,6 +49,7 @@ export default class ProxmoxConnection {
     protected basicURL: string;
     protected pveLogger: Logger;
     protected mySQLClient: MySQLClient;
+    protected cw: ContainerWorkspaces;
 
     protected authCookie = '';
     protected csrfPreventionToken = '';
@@ -95,6 +97,7 @@ export default class ProxmoxConnection {
         port = 8006,
         pveLogger,
         mySQLClient,
+        cw,
     }: {
         hostname: string;
         protocol: httpProtocol;
@@ -103,7 +106,9 @@ export default class ProxmoxConnection {
         port?: number;
         pveLogger: Logger;
         mySQLClient: MySQLClient;
+        cw: ContainerWorkspaces;
     }) {
+        this.cw = cw;
         this.hostname = hostname;
         this.protocol = protocol;
         this.username = username;
