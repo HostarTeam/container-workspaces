@@ -5,6 +5,14 @@ import { MessageDataResponse } from '../../typing/MessageData';
 import MessageRouting from './MessageRouting';
 import { MessageRoutingHandler } from '../../typing/types';
 
+/**
+ * Handle a ws command
+ * @async
+ * @param  {IncomingMessage} req
+ * @param  {MessageDataResponse} messageData
+ * @param  {WebSocket} socket
+ * @returns {Promise<void>}
+ */
 export async function wsCommand(
     this: ContainerWorkspaces,
     req: IncomingMessage,

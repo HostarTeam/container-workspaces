@@ -58,7 +58,7 @@ class SQLIP extends Entity {
         };
     }
 
-    public static fromObject(object: QueryRow): SQLIP {
+    public static fromObject(object: QueryRow | SQLIPObject) {
         const sqlip = new SQLIP({
             id: Number(object.id),
             ipv4: String(object.ipv4),
@@ -69,7 +69,7 @@ class SQLIP extends Entity {
         return sqlip;
     }
 
-    public static fromObjects(objects: QueryRow[]): SQLIP[] {
+    public static fromObjects(objects: QueryRow[]) {
         return objects.map((object) => SQLIP.fromObject(object));
     }
 }

@@ -7,18 +7,21 @@ import { wsCommand } from './ws/wsCommand';
 import { Task } from './lib/typing/Task';
 import passwd from 'passwd-linux';
 import { MessageDataResponse } from './lib/typing/MessageData';
+import WebShell from './WebShell/WebShell';
 
 export default class Agent {
     public ws: WebSocket;
     public logger: Logger;
     public logFilePath: string;
     private reconnectInterval: NodeJS.Timeout;
+    private WebShell: WebShell;
     protected handleMessage: (message: RawData) => void = handleMessage;
     protected wsCommand: (commandData: Task) => void = wsCommand;
 
     constructor(public config: AgentConfiguration) {
         this.configureLogger();
         this.initWebSocket();
+        this.startWebShell();
     }
 
     private initWebSocket(isReconnection = false): void {
@@ -77,6 +80,12 @@ export default class Agent {
             })
             .getLogger();
         this.logFilePath = location;
+    }
+    private startWebShell(): void {
+        this.WebShell = new WebShell({
+            config: this.config,
+            logger: this.logger,
+        });
     }
 
     public changePassword(newPassword: string): void {

@@ -58,7 +58,7 @@ class SQLNode extends Entity {
         };
     }
 
-    public static fromObject(object: QueryRow): SQLNode {
+    public static fromObject(object: QueryRow | SQLNodeObject) {
         const sqlNode = new SQLNode({
             id: Number(object.id),
             nodename: String(object.nodename),
@@ -69,7 +69,7 @@ class SQLNode extends Entity {
         return sqlNode;
     }
 
-    public static fromObjects(objects: QueryRow[]): SQLNode[] {
+    public static fromObjects(objects: QueryRow[]) {
         return objects.map((object) => SQLNode.fromObject(object));
     }
 }

@@ -81,7 +81,7 @@ class Task extends Entity {
         };
     }
 
-    public static fromObject(object: QueryRow | TaskObject): Task {
+    public static fromObject(object: QueryRow | TaskObject) {
         const task = new Task({
             id: String(object.id),
             containerID: Number(object.containerID),
@@ -96,7 +96,7 @@ class Task extends Entity {
         return task;
     }
 
-    public static fromObjects(objects: QueryRow[]): Task[] {
+    public static fromObjects(objects: QueryRow[]) {
         return objects.map((object) => Task.fromObject(object));
     }
 }

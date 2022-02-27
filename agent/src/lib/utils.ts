@@ -1,7 +1,11 @@
 import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { AgentConfiguration } from './typing/types';
-import { execSync } from 'child_process';
+import { exec, execSync } from 'child_process';
 import os from 'os';
+import { WebSocket } from 'ws';
+import { promisify } from 'util';
+
+export const execAsync = promisify(exec);
 
 export function generatePassword(length: number): string {
     let result = '';
@@ -101,4 +105,12 @@ export function printSuccess(message): void {
 
 export function printFatal(message): void {
     console.log(`${Colors.FatalPurple}Fatal: ${Colors.Reset}${message}`);
+}
+
+export function getSocketID(socket: WebSocket) {
+    /* eslint-disable */
+    return `${(<any>socket)._socket.remoteAddress}:${
+        (<any>socket)._socket.remotePort
+    }`;
+    /* eslint-disable */
 }

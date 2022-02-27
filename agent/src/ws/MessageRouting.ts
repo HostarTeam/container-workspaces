@@ -1,9 +1,10 @@
-import { exec, ExecException } from 'child_process';
+import { ExecException } from 'child_process';
 import Agent from '../Agent';
 import { CommandErrorReport, ErrorReport } from '../lib/typing/types';
 import { MessageDataResponse } from '../lib/typing/MessageData';
 import { Task } from '../lib/typing/Task';
-import { getLastLines } from '../lib/utils';
+import { execAsync, getLastLines } from '../lib/utils';
+import { ActualExecException, ExecReportError } from '../lib/typing/errors';
 
 export default class MessageRouting {
     [key: string]: (agent: Agent, task: Task) => Promise<void>;
@@ -11,15 +12,10 @@ export default class MessageRouting {
     public static async shell_exec(agent: Agent, task: Task): Promise<void> {
         const commands: string[] = task.data.args.commands;
         for (const command of commands) {
-            let repstdout = '';
-            let repstderr = '';
             try {
-                exec(command, (error, stdout, stderr) => {
-                    if (error) {
-                        repstdout = stdout;
-                        repstderr = stderr;
-                        throw error;
-                    }
+                await execAsync(command).catch((err: ExecException) => {
+                    const actualExecException = <ActualExecException>err;
+                    throw new ExecReportError(actualExecException);
                 });
 
                 agent.logger.info(`Executed command ${command}`);
@@ -35,13 +31,13 @@ export default class MessageRouting {
 
                 agent.sendData(clientCommand);
             } catch (err: unknown) {
-                if (err instanceof Error) {
+                if (err instanceof ExecReportError) {
                     const errorReport: CommandErrorReport = {
                         command,
-                        stderr: repstderr,
-                        stdout: repstdout,
-                        exitCode: (<ExecException>err).code,
-                        stack: err.stack,
+                        stderr: err.execException.stderr,
+                        stdout: err.execException.stdout,
+                        exitCode: err.execException.code,
+                        stack: err.execException.stack,
                         message: err.message,
                     };
 

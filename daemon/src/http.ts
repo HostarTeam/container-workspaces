@@ -4,6 +4,11 @@ import { createServer } from 'http';
 import ContainerWorkspaces from './ContainerWorkspaces';
 import { printSuccess } from './lib/util/utils';
 
+/**
+ * Setup the http server
+ * @param  {ContainerWorkspaces} this
+ * @returns {void}
+ */
 export default function setupHttp(this: ContainerWorkspaces): void {
     this.httpServer = createServer();
 

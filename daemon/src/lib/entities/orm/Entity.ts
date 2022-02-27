@@ -1,5 +1,10 @@
 import { QueryRow } from '@hostarteam/mysqlclient';
 
+/**
+ * Base class for ORM entity.
+ * @class
+ * @classdesc All entity classes inherit from this class.
+ */
 class Entity {
     public toObject(): QueryRow {
         throw new Error('This method has to be overriden and implemented');

@@ -20,7 +20,6 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
 
     /**
      * This route is used in order to add a PVE node to the available nodes in the databases.
-     * @todo Make sure that the node exists on the pve cluster.
      */
     router.post(
         '/nodes/add',

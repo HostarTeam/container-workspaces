@@ -122,12 +122,25 @@ export default class ProxmoxConnection {
         });
     }
 
+    /**
+     * Initialize the proxmox api server.
+     * @private
+     * @method
+     * @returns {void}
+     */
     private intialize() {
         if (this.port != 80)
             this.basicURL = `${this.protocol}://${this.hostname}:${this.port}/api2/json`;
         else this.basicURL = `${this.protocol}://${this.hostname}/api2/json`;
     }
 
+    /**
+     * Connect to the proxmox api server and get the API keys.
+     * @private
+     * @method
+     * @async
+     * @returns {Promise<void>}
+     */
     private async connect() {
         await this.getAuthKeys();
         this.pveLogger.info(

@@ -29,7 +29,6 @@ import Task from './lib/entities/Task';
 
 export default class ContainerWorkspaces {
     protected httpServer: Server;
-    protected apiKey: string;
     protected readonly listenAddress: string;
     protected readonly listenPort: number;
     protected readonly remoteAddress: string;
@@ -67,7 +66,6 @@ export default class ContainerWorkspaces {
     protected mySQLClient: MySQLClient;
 
     constructor({
-        apiKey,
         listenAddress,
         listenPort,
         remoteAddress,
@@ -76,7 +74,6 @@ export default class ContainerWorkspaces {
         database: databaseConf,
         pve: PVEConf,
     }: Configuration) {
-        this.apiKey = apiKey;
         this.listenAddress = listenAddress;
         this.listenPort = listenPort;
         this.remoteAddress = remoteAddress;
@@ -99,6 +96,12 @@ export default class ContainerWorkspaces {
         });
     }
 
+    /**
+     * Initialize the websocket server.
+     * @protected
+     * @method
+     * @returns {void}
+     */
     protected initWebSocketServer(): void {
         this.wss = new WebSocketServer({ noServer: true });
         this.wss.on('connection', (socket, req) => {
@@ -122,6 +125,13 @@ export default class ContainerWorkspaces {
         });
     }
 
+    /**
+     * Configure loggers.
+     * @private
+     * @method
+     * @param  {string} logDir='/var/log/cw'
+     * @returns {void}
+     */
     private configureLoggers(logDir = '/var/log/cw'): void {
         const logsName = ['main', 'http', 'ws', 'pve'];
         this.log4js = createLoggers(logsName, logDir);
@@ -132,6 +142,12 @@ export default class ContainerWorkspaces {
         this.pveLogger = this.log4js.getLogger('pve');
     }
 
+    /**
+     * Initialize all routers.
+     * @protected
+     * @method
+     * @returns {void}
+     */
     protected initRouters(): void {
         this.initConfigRouter();
         this.initContainerRouter();
@@ -139,6 +155,14 @@ export default class ContainerWorkspaces {
         this.initAgentRouter();
     }
 
+    /**
+     * Add a task to the database.
+     * @public
+     * @method
+     * @async
+     * @param  {Task} task
+     * @returns {Promise<Task>}
+     */
     public async addTask(task: Task): Promise<Task> {
         const sql =
             'INSERT INTO tasks (id, start_time, data, containerID) VALUES (?, ?, ?, ?)';
@@ -151,6 +175,15 @@ export default class ContainerWorkspaces {
 
         return task;
     }
+
+    /**
+     * Get a task from the database.
+     * @public
+     * @method
+     * @async
+     * @param  {string} id
+     * @returns {Promise<Task | null>}
+     */
     public async getTask(id: Task['id']): Promise<Task | null> {
         const sql = 'SELECT * FROM tasks WHERE id = ?';
         const result = await this.mySQLClient.getFirstQueryResult(sql, [id]);
@@ -159,6 +192,14 @@ export default class ContainerWorkspaces {
         return task;
     }
 
+    /**
+     * Update a task in the database
+     * @public
+     * @method
+     * @async
+     * @param  {Task} task
+     * @returns {Promise<Task>}
+     */
     public async updateTask(task: Task): Promise<Task> {
         const sql =
             'UPDATE tasks SET start_time = ?, end_time = ?, data = ?, status = ?, error = ?, containerID = ? WHERE id = ?';
@@ -175,6 +216,15 @@ export default class ContainerWorkspaces {
         return task;
     }
 
+    /**
+     * Mark a task as errored in the database
+     * @public
+     * @method
+     * @async
+     * @param  {string} taskid
+     * @param  {Error} error
+     * @returns {Promise<void>}
+     */
     public async errorTask(taskid: Task['id'], error: Error): Promise<void> {
         const erroredTask = await this.getTask(taskid);
         erroredTask.status = 'error';
@@ -183,6 +233,14 @@ export default class ContainerWorkspaces {
         await this.updateTask(erroredTask);
     }
 
+    /**
+     * Mark a task as finished in the database
+     * @public
+     * @method
+     * @async
+     * @param  {string} taskid
+     * @returns {Promise<void>}
+     */
     public async finishTask(taskid: Task['id']): Promise<void> {
         const finishedTask = await this.getTask(taskid);
         finishedTask.status = 'OK';
@@ -191,6 +249,16 @@ export default class ContainerWorkspaces {
         await this.updateTask(finishedTask);
     }
 
+    /**
+     * Change the status of a container
+     * @public
+     * @method
+     * @async
+     * @param  {Request} req
+     * @param  {Response} res
+     * @param  {status} status
+     * @returns {Promise<void>}
+     */
     public async triggerStatusChange(
         req: Request,
         res: Response,
@@ -209,6 +277,15 @@ export default class ContainerWorkspaces {
         else res.send({ status: 'ok' });
     }
 
+    /**
+     * Get the status of a container
+     * @protected
+     * @method
+     * @async
+     * @param {number} containerID
+     * @param {string} ip
+     * @returns {Promise<string>}
+     */
     protected async getLogs(containerID: number, ip: string): Promise<string> {
         const data: MessageData = {
             action: 'send_logs',
@@ -229,6 +306,13 @@ export default class ContainerWorkspaces {
         return null;
     }
 
+    /**
+     * Get a client from the connected clients list
+     * @protected
+     * @method
+     * @param  {string} ip
+     * @returns {WebSocket | null}
+     */
     protected getConnectedClient(ip: string): WebSocket | null {
         const clientList: WebSocket[] = Array.from(this.wss.clients);
         const selectedClient: WebSocket = clientList.find(
@@ -240,6 +324,15 @@ export default class ContainerWorkspaces {
         return selectedClient;
     }
 
+    /**
+     * Change the password of a container
+     * @protected
+     * @method
+     * @async
+     * @param  {number} containerID
+     * @param  {string} newPassword
+     * @returns {Promise<boolean>}
+     */
     protected async changeContainerPassword(
         containerID: number,
         newPassword: string
@@ -262,6 +355,12 @@ export default class ContainerWorkspaces {
         return true;
     }
 
+    /**
+     * Get ip of container and set in in req
+     * @protected
+     * @method
+     * @returns {Handler}
+     */
     protected getContainerIP(): Handler {
         return async (req, res, next) => {
             if (isNaN(Number(req.params.containerID)))
@@ -294,6 +393,13 @@ export default class ContainerWorkspaces {
         };
     }
 
+    /**
+     * Get the configuration from the database
+     * @public
+     * @method
+     * @async
+     * @returns {Promise<Config>}
+     */
     public async getConfig(): Promise<Config> {
         const sql = 'SELECT * FROM config';
         const result = await this.mySQLClient.getFirstQueryResult(sql);
@@ -302,16 +408,36 @@ export default class ContainerWorkspaces {
         return config;
     }
 
+    /**
+     * Update the configuration in the database
+     * @private
+     * @method
+     * @param  {Config} config
+     * @returns {Promise<Config>}
+     */
     private async updateConfig(config: Config): Promise<void> {
         const sql = 'UPDATE config SET config = ?';
         await this.mySQLClient.executeQuery(sql, [JSON.stringify(config)]);
     }
 
+    /**
+     * Get the container hardware options from the database
+     * @async
+     * @returns {Promise<CTHardwareOptions>}
+     */
     protected async getCTHardwareOptions(): Promise<CTHardwareOptions> {
         const config = await this.getConfig();
         return config['ct_options'];
     }
 
+    /**
+     * Update the container hardware options in the database
+     * @protected
+     * @method
+     * @async
+     * @param  {CTHardwareOptions} options
+     * @returns {Promise<CTHardwareOptions>}
+     */
     protected async udpateCTOptions(options: CTHardwareOptions): Promise<void> {
         const config = await this.getConfig();
         config['ct_options'] = options;
@@ -319,11 +445,26 @@ export default class ContainerWorkspaces {
         await this.updateConfig(config);
     }
 
+    /**
+     * Get the initialization commands from the database
+     * @protected
+     * @method
+     * @async
+     * @returns {Promise<string[]>}
+     */
     protected async getInitCommands(): Promise<string[]> {
         const config = await this.getConfig();
         return config['init_commands'];
     }
 
+    /**
+     * Update the initialization commands in the database
+     * @protected
+     * @method
+     * @async
+     * @param  {string[]} commands
+     * @returns {Promise<void>}
+     */
     protected async updateInitCommands(commands: string[]): Promise<void> {
         const config = await this.getConfig();
         config['init_commands'] = commands;
@@ -331,6 +472,14 @@ export default class ContainerWorkspaces {
         await this.updateConfig(config);
     }
 
+    /**
+     * Get the container ID in proxmox via its ip address
+     * @protected
+     * @method
+     * @async
+     * @param  {string} ip
+     * @returns {Promise<number | null}}
+     */
     protected async getContainerID(ip: string): Promise<number | null> {
         const sql = 'SELECT id FROM cts WHERE ipv4 = ?';
         const result = await this.mySQLClient.getFirstQueryResult(sql, ip);
@@ -339,6 +488,14 @@ export default class ContainerWorkspaces {
         return ct.id;
     }
 
+    /**
+     * Connect the application to the database
+     * @private
+     * @method
+     * @async
+     * @param  {ConnectionOptions} connectionConfig
+     * @returns {Promise<void>}
+     */
     private async connectDatabase(connectionConfig: ConnectionOptions) {
         this.mySQLClient = new MySQLClient(connectionConfig);
         await this.mySQLClient.connect();

@@ -1,6 +1,9 @@
 import { Handler, NextFunction, Request, Response } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 
+/**
+ * Logging middleware for http server.
+ */
 function httpLoggerMiddleware(this: ContainerWorkspaces): Handler {
     return (req: Request, res: Response, next: NextFunction) => {
         res.on('finish', () => {

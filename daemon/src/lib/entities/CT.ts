@@ -42,7 +42,7 @@ class CT extends Entity {
         };
     }
 
-    public static fromObject(object: QueryRow): CT {
+    public static fromObject(object: QueryRow | CTObject) {
         const ct = new CT({
             id: Number(object.id),
             ipv4: String(object.ipv4),
@@ -51,7 +51,7 @@ class CT extends Entity {
         return ct;
     }
 
-    public static fromObjects(objects: QueryRow[]): CT[] {
+    public static fromObjects(objects: QueryRow[]) {
         return objects.map((object) => CT.fromObject(object));
     }
 }

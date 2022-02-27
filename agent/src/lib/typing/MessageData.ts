@@ -44,5 +44,6 @@ export class InvalidMessageError extends Error {
     constructor(public message: string) {
         super();
         this.name = 'InvalidMessageError';
+        Object.setPrototypeOf(this, InvalidMessageError.prototype);
     }
 }
