@@ -674,17 +674,25 @@ export async function changeContainerStatus(
     this: ProxmoxConnection,
     containerID: number,
     status: status
-): Promise<string> {
+): Promise<ActionResult<string | null>> {
     try {
         const nodename = await this.getNodeOfContainer(containerID);
         if (!nodename) return null;
-        const ctConfig = (
-            await this.call<string>(
-                `nodes/${nodename}/lxc/${containerID}/status/${status}`,
-                'POST'
-            )
-        ).data;
-        return ctConfig;
+        const res = await this.call<string | null>(
+            `nodes/${nodename}/lxc/${containerID}/status/${status}`,
+            'POST'
+        );
+
+        if (res?.success === 1) {
+            return {
+                ok: true,
+            };
+        } else {
+            return {
+                ok: false,
+                error: res?.message.replaceAll('\n', '') || 'Unknown error',
+            };
+        }
     } catch (err) {
         console.error(err);
         return null;

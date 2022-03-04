@@ -130,8 +130,8 @@ export default class ProxmoxConnection {
      */
     private intialize() {
         if (this.port != 80)
-            this.basicURL = `${this.protocol}://${this.hostname}:${this.port}/api2/json`;
-        else this.basicURL = `${this.protocol}://${this.hostname}/api2/json`;
+            this.basicURL = `${this.protocol}://${this.hostname}:${this.port}/api2/extjs`;
+        else this.basicURL = `${this.protocol}://${this.hostname}/api2/extjs`;
     }
 
     /**
