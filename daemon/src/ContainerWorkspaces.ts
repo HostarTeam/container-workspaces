@@ -26,6 +26,8 @@ import authMiddleware from './lib/middleware/auth';
 import { MySQLClient, ConnectionOptions } from '@hostarteam/mysqlclient';
 import CT from './lib/entities/CT';
 import Task from './lib/entities/Task';
+import { parse } from 'path';
+import { createProxyServer } from 'http-proxy';
 
 export default class ContainerWorkspaces {
     protected httpServer: Server;
@@ -90,6 +92,7 @@ export default class ContainerWorkspaces {
             protocol: PVEConf.protocol,
             username: PVEConf.username,
             password: PVEConf.password,
+            port: 80,
             pveLogger: this.pveLogger,
             mySQLClient: this.mySQLClient,
             cw: this,
@@ -110,18 +113,54 @@ export default class ContainerWorkspaces {
             });
         });
 
-        this.httpServer.on('upgrade', (request, socket, head) => {
+        this.httpServer.on('upgrade', async (request, socket, head) => {
             const connected = this.getConnectedClient(
                 request.socket.remoteAddress
             );
-            this.wss.handleUpgrade(request, socket, head, async (socket) => {
-                if (connected) socket.close();
-                const isAuthorized: boolean = await this.checkIP(
-                    request.socket.remoteAddress
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { dir } = parse(request.url);
+            if (dir === '/') {
+                this.wss.handleUpgrade(
+                    request,
+                    socket,
+                    head,
+                    async (socket) => {
+                        if (connected) socket.close();
+                        const isAuthorized: boolean = await this.checkIP(
+                            request.socket.remoteAddress
+                        );
+                        if (isAuthorized)
+                            this.wss.emit('connection', socket, request);
+                        else socket.close();
+                    }
                 );
-                if (isAuthorized) this.wss.emit('connection', socket, request);
-                else socket.close();
-            });
+            } else if (dir === '/webshell') {
+                const rawContainerID: string | null = request.url
+                    .split('/')[2]
+                    ?.split('/')[0];
+
+                const containerID = Number(rawContainerID);
+                if (!Number.isInteger(containerID)) request.destroy();
+                const agentIP = await this.proxmoxClient.getContainerIP(
+                    containerID
+                );
+                if (
+                    !agentIP ||
+                    !this.checkIP(agentIP) ||
+                    !this.getConnectedClient(agentIP)
+                )
+                    return request.destroy();
+                // TODO: Add verify to webshell path
+                const proxy = createProxyServer({
+                    target: {
+                        protocol: 'http',
+                        host: agentIP,
+                        port: 49150,
+                    },
+                    ws: true,
+                });
+                proxy.ws(request, socket, head);
+            } else request.destroy();
         });
     }
 
@@ -269,10 +308,11 @@ export default class ContainerWorkspaces {
             containerID,
             status
         );
-        if (!statusRes)
+        if (!statusRes.ok)
             res.status(409).send({
                 status: 'error',
-                message: `could not ${status} container`,
+                message: statusRes.data,
+                error: statusRes.error,
             });
         else res.send({ status: 'ok' });
     }

@@ -211,6 +211,9 @@ export interface ContainerStatus {
 export interface ProxmoxResponse<T> {
     data?: T;
     errors?: string[];
+    message?: string;
+    success?: 0 | 1;
+    status?: number;
 }
 
 export type status =
@@ -225,9 +228,10 @@ export type status =
  * This interface is used to represent the result of an action performed
  * @interface
  */
-export interface ActionResult {
-    error: null | string;
+export interface ActionResult<DataType = null> {
+    error?: null | string;
     ok: boolean;
+    data?: DataType;
 }
 
 /**
