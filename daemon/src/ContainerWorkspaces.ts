@@ -15,8 +15,8 @@ import ProxmoxConnection from './lib/proxmox/ProxmoxConnection';
 import { WebSocket, WebSocketServer } from 'ws';
 import { handleMessage } from './lib/ws/wsMessageHandler';
 import { wsCommand } from './lib/ws/routing/wsCommand';
-import { sendTaskToAgent } from './lib/ws/commandAgent';
-import { Config, status, Configuration } from './lib/typing/types';
+import { ClientNotFoundError, sendTaskToAgent } from './lib/ws/commandAgent';
+import { Config, status, Configuration, Ticket } from './lib/typing/types';
 import { MessageData } from './lib/typing/MessageData';
 import { initConfigRouter } from './lib/routers/config';
 import { CTHardwareOptions } from './lib/typing/options';
@@ -137,7 +137,8 @@ export default class ContainerWorkspaces {
             } else if (dir === '/webshell') {
                 const rawContainerID: string | null = request.url
                     .split('/')[2]
-                    ?.split('/')[0];
+                    ?.split('/')[0]
+                    ?.split('?')[0];
 
                 const containerID = Number(rawContainerID);
                 if (!Number.isInteger(containerID)) request.destroy();
@@ -150,7 +151,6 @@ export default class ContainerWorkspaces {
                     !this.getConnectedClient(agentIP)
                 )
                     return request.destroy();
-                // TODO: Add verify to webshell path
                 const proxy = createProxyServer({
                     target: {
                         protocol: 'http',
@@ -540,5 +540,37 @@ export default class ContainerWorkspaces {
         this.mySQLClient = new MySQLClient(connectionConfig);
         await this.mySQLClient.connect();
         printSuccess('Connected to database');
+    }
+
+    /**
+     * Tell an agent to create a ticket
+     * @protected
+     * @method
+     * @async
+     * @param  {number} containerID
+     * @param  {Ticket} ticket
+     * @returns {Promise<void>}
+     */
+    protected async createTicket(containerID: number, ticket: Ticket) {
+        const agentIP = await this.proxmoxClient.getContainerIP(
+            Number(containerID)
+        );
+        const connection = this.getConnectedClient(agentIP);
+        if (!connection)
+            throw new ClientNotFoundError(
+                `Could not find client with IP ${agentIP}`
+            );
+
+        const task = new Task({
+            containerID: containerID,
+            data: {
+                action: 'create_ticket',
+                args: {
+                    ticket,
+                },
+            },
+        });
+
+        await this.sendTaskToAgent(task, agentIP);
     }
 }

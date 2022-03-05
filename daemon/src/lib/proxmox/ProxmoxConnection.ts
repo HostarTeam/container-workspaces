@@ -10,7 +10,7 @@ import {
     call,
     changeContainerStatus,
     changeCTHostname,
-    checkIfNodeIsFine,
+    returnNodeIfFine,
     createContainer,
     createContainerInProxmox,
     deleteContainer,
@@ -38,6 +38,7 @@ import {
     removeNodeFromDatabase,
     setCTAsReady,
     updateIPUsedStatus,
+    scoreNode,
 } from './apiTools';
 
 export default class ProxmoxConnection {
@@ -62,7 +63,7 @@ export default class ProxmoxConnection {
     public getNodeByLocation = getNodeByLocation;
     protected createContainerInProxmox = createContainerInProxmox;
     protected getFirstFineNode = getFirstFineNode;
-    protected checkIfNodeIsFine = checkIfNodeIsFine;
+    protected returnIfNodeIsFine = returnNodeIfFine;
     protected getFreeIP = getFreeIP;
     protected updateIPUsedStatus = updateIPUsedStatus;
     protected addCotainerToDatabase = addCotainerToDatabase;
@@ -88,6 +89,7 @@ export default class ProxmoxConnection {
     public setCTAsReady = setCTAsReady;
     public getContainers = getContainers;
     public getContainerStatuses = getContainerStatuses;
+    public scoreNode = scoreNode;
 
     constructor({
         hostname,

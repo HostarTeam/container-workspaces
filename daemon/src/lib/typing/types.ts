@@ -253,3 +253,17 @@ export interface SQLClient {
 }
 
 export type valueParam = string | number | Array<string | number>;
+
+export interface Ticket {
+    id: string;
+    expires: number;
+}
+
+export interface Backup {
+    vmid: number;
+    size: number; // The size of the backup in bytes
+    ctime: number; // The creation time of the backup in seconds
+    volid: string; // The volume id of the backup
+    format: string; // the format file of the backup for example: 'tar.zst'
+    content: string | 'backup'; // The content type of the data that has been recieved from the storage
+}

@@ -1,4 +1,4 @@
-import { CommandError } from './types';
+import { CommandError, Ticket } from './types';
 
 /**
  * This class exists to validate the data of a task
@@ -53,6 +53,7 @@ interface possibleArgs {
     errorReport?: CommandError;
     lines?: string | null;
     status?: 'success' | 'error';
+    ticket?: Ticket;
 }
 
 /**

@@ -2,8 +2,8 @@ import { Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import Task from '../entities/Task';
 import { MessageData } from '../typing/MessageData';
-import { ActionResult, ContainerStatus, LXC } from '../typing/types';
-import { requireBodyProps, validatePassword } from '../util/utils';
+import { ActionResult, ContainerStatus, LXC, Ticket } from '../typing/types';
+import { requireBodyProps, validatePassword, generateID } from '../util/utils';
 import { ClientNotFoundError } from '../ws/commandAgent';
 
 export function initContainerRouter(this: ContainerWorkspaces): void {
@@ -106,13 +106,9 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      * @param {string} containerID
      * This route is used in order to start a container.
      */
-    router.patch(
-        '/:containerID/start',
-        this.getContainerIP(),
-        async (req: Request, res: Response) => {
-            await this.triggerStatusChange(req, res, 'start');
-        }
-    );
+    router.patch('/:containerID/start', async (req: Request, res: Response) => {
+        await this.triggerStatusChange(req, res, 'start');
+    });
 
     /**
      * @param {string} containerID
@@ -120,7 +116,6 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      */
     router.patch(
         '/:containerID/shutdown',
-        this.getContainerIP(),
         async (req: Request, res: Response) => {
             await this.triggerStatusChange(req, res, 'shutdown');
         }
@@ -130,13 +125,9 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      * @param {string} containerID
      * This route is used in order to stop a container.
      */
-    router.patch(
-        '/:containerID/stop',
-        this.getContainerIP(),
-        async (req: Request, res: Response) => {
-            await this.triggerStatusChange(req, res, 'stop');
-        }
-    );
+    router.patch('/:containerID/stop', async (req: Request, res: Response) => {
+        await this.triggerStatusChange(req, res, 'stop');
+    });
 
     /**
      * @param {string} containerID
@@ -144,9 +135,30 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      */
     router.patch(
         '/:containerID/reboot',
-        this.getContainerIP(),
         async (req: Request, res: Response) => {
             await this.triggerStatusChange(req, res, 'reboot');
+        }
+    );
+
+    /**
+     * @param {string} containerID
+     * This route is used in order to suspend a container.
+     */
+    router.patch(
+        '/:containerID/suspend',
+        async (req: Request, res: Response) => {
+            await this.triggerStatusChange(req, res, 'suspend');
+        }
+    );
+
+    /**
+     * @param {string} containerID
+     * This route is used in order to resume a container.
+     */
+    router.patch(
+        '/:containerID/resume',
+        async (req: Request, res: Response) => {
+            await this.triggerStatusChange(req, res, 'resume');
         }
     );
 
@@ -282,6 +294,55 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
                     message: 'could not create container',
                     error: created.error,
                 });
+        }
+    );
+
+    router.post(
+        '/:containerID/ticket',
+        this.getContainerIP(),
+        async (req: Request, res: Response) => {
+            const containerID = Number(req.params.containerID);
+
+            if (!this.getConnectedClient(req.agentIP))
+                return res.status(409).send({
+                    status: 'conflict',
+                    message:
+                        'Container with given ID is not connected to this server',
+                });
+
+            const ticketID = generateID();
+            const ticket: Ticket = {
+                id: ticketID,
+                expires: Date.now() + 1000 * 60, // One minute
+            };
+
+            try {
+                await this.createTicket(containerID, ticket);
+                res.status(201).send({
+                    status: 'ok',
+                    ticket,
+                });
+            } catch (err: unknown) {
+                if (err instanceof ClientNotFoundError) {
+                    return res.status(409).send({
+                        status: 'conflict',
+                        message:
+                            'Container with given ID is not connected to this server',
+                    });
+                } else if (err instanceof Error) {
+                    return res.status(500).send({
+                        status: 'error',
+                        message: 'Could not create ticket',
+                        error: err.message,
+                    });
+                } else {
+                    return res.status(500).send({
+                        status: 'error',
+                        message: 'Could not create ticket',
+                        error: 'Unknown error',
+                    });
+                }
+            }
         }
     );
 }

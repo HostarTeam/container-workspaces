@@ -203,7 +203,7 @@ export async function getAvailableLocations(
         if (
             sqlNode &&
             !availableLocations.includes(sqlNode.location) &&
-            this.checkIfNodeIsFine(node.node)
+            this.returnIfNodeIsFine(node.node)
         ) {
             availableLocations.push(sqlNode.location);
         }
@@ -525,21 +525,21 @@ export async function getNodeIP(
  * @param  {string} nodename
  * @returns {Promise<boolean>}
  */
-export async function checkIfNodeIsFine(
+export async function returnNodeIfFine(
     this: ProxmoxConnection,
     nodename: string
-): Promise<boolean> {
+): Promise<Node | null> {
     const nodes: Node[] = await this.getNodes();
     const node: Node = nodes.find((x) => x.node == nodename);
     if (node) {
-        if (node.type !== 'node') return false;
-        if (node.status == 'offline' || node.status == 'unknown') return false;
-        if (node.cpu * 100 > 90) return false;
-        if ((node.mem / node.maxmem) * 100 > 90) return false;
-        if ((node.disk / node.maxdisk) * 100 > 90) return false;
-        return true;
+        if (node.type !== 'node') return null;
+        if (node.status == 'offline' || node.status == 'unknown') return null;
+        if (node.cpu * 100 > 90) return null;
+        if ((node.mem / node.maxmem) * 100 > 90) return null;
+        if ((node.disk / node.maxdisk) * 100 > 90) return null;
+        return node;
     }
-    return false;
+    return null;
 }
 
 /**
@@ -552,11 +552,47 @@ export async function getFirstFineNode(
     this: ProxmoxConnection,
     nodes: SQLNode[]
 ): Promise<string | null> {
+    const fineNodesAsPromises: Promise<Node | null>[] = [];
     for (const node of nodes) {
-        if (await this.checkIfNodeIsFine(node.nodename)) return node.nodename;
+        fineNodesAsPromises.push(this.returnIfNodeIsFine(node.nodename));
     }
 
-    return null;
+    const filteredNodes: Node[] = (
+        await Promise.all(fineNodesAsPromises)
+    ).filter((x) => x !== null);
+
+    const nodeScores: number[] = filteredNodes.map((node) =>
+        this.scoreNode(node)
+    );
+
+    const highestScoreIndex: number = nodeScores.indexOf(
+        Math.max(...nodeScores)
+    );
+
+    if (highestScoreIndex === -1) return null;
+
+    return filteredNodes[highestScoreIndex].node;
+}
+
+/**
+ * Score a node based on its resource use and availability and return a number between 0 and 100.
+ * @param  {Node} node
+ * @returns {Promise<number>}
+ */
+export function scoreNode(this: ProxmoxConnection, node: Node): number {
+    let score = 0;
+    if (node.status !== 'online') {
+        return 0;
+    } else {
+        score++;
+    }
+    const cpuPercentage = node.cpu * 100;
+    score += Math.floor((100 - cpuPercentage) / 3);
+    const memPercentage = (node.mem / node.maxmem) * 100;
+    score += Math.floor((100 - memPercentage) / 3);
+    const diskPercentage = (node.disk / node.maxdisk) * 100;
+    score += Math.floor((100 - diskPercentage) / 3);
+    return score;
 }
 
 /**
