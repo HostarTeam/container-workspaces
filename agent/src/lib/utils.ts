@@ -114,3 +114,10 @@ export function getSocketID(socket: WebSocket) {
     }`;
     /* eslint-disable */
 }
+
+export function checkIfSocketClosed(socket: WebSocket): boolean {
+    return (
+        socket.readyState === WebSocket.CLOSED ||
+        socket.readyState === WebSocket.CLOSING
+    );
+}

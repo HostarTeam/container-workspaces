@@ -8,11 +8,13 @@ import { Task } from './lib/typing/Task';
 import passwd from 'passwd-linux';
 import { MessageDataResponse } from './lib/typing/MessageData';
 import WebShell from './WebShell/WebShell';
+import Ticket from './lib/typing/Ticket';
 
 export default class Agent {
     public ws: WebSocket;
     public logger: Logger;
     public logFilePath: string;
+    public tickets: Map<string, Ticket> = new Map();
     private reconnectInterval: NodeJS.Timeout;
     private WebShell: WebShell;
     protected handleMessage: (message: RawData) => void = handleMessage;
@@ -48,9 +50,9 @@ export default class Agent {
 
         this.ws.on('error', (err) => {
             if (err.message.includes('connect ECONNREFUSED')) {
+                this.logger.error(err.message);
                 this.reconnectToWS();
             }
-            this.logger.error(err.message);
         });
     }
 
@@ -82,10 +84,13 @@ export default class Agent {
         this.logFilePath = location;
     }
     private startWebShell(): void {
-        this.WebShell = new WebShell({
-            config: this.config,
-            logger: this.logger,
-        });
+        this.WebShell = new WebShell(
+            {
+                config: this.config,
+                logger: this.logger,
+            },
+            this.tickets
+        );
     }
 
     public changePassword(newPassword: string): void {

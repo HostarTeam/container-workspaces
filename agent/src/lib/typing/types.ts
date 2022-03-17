@@ -1,4 +1,3 @@
-import { ChildProcess, ExecException } from 'child_process';
 import MessageRouting from '../../ws/MessageRouting';
 
 export interface AgentConfiguration {

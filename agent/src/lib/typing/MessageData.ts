@@ -1,3 +1,4 @@
+import { TicketOptions } from './Ticket';
 import { CommandErrorReport, ErrorReport } from './types';
 
 export class MessageData {
@@ -38,6 +39,7 @@ interface possibleArgs {
     errorReport?: CommandErrorReport | ErrorReport;
     lines?: string | null;
     status?: 'success' | 'error';
+    ticket?: TicketOptions;
 }
 
 export class InvalidMessageError extends Error {

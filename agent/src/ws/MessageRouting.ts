@@ -5,6 +5,7 @@ import { MessageDataResponse } from '../lib/typing/MessageData';
 import { Task } from '../lib/typing/Task';
 import { execAsync, getLastLines } from '../lib/utils';
 import { ActualExecException, ExecReportError } from '../lib/typing/errors';
+import Ticket from '../lib/typing/Ticket';
 
 export default class MessageRouting {
     [key: string]: (agent: Agent, task: Task) => Promise<void>;
@@ -116,5 +117,10 @@ export default class MessageRouting {
 
             agent.sendData(clientCommand);
         }
+    }
+
+    public static async create_ticket(agent: Agent, task: Task): Promise<void> {
+        const ticket = task.data.args.ticket;
+        agent.tickets.set(ticket.id, new Ticket(ticket));
     }
 }
