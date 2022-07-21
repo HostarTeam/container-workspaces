@@ -3,13 +3,9 @@ import WebShell from './WebShell';
 import { getSocketID } from '../lib/utils';
 
 export default class MessageRouting {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [key: string]: (ws: WebShell, socket: WebSocket, data?: any) => void;
+    [key: string]: (ws: WebShell, socket: WebSocket, data?: unknown) => void;
 
     public static disconnect(ws: WebShell, socket: WebSocket): void {
-        // const socketID = getSocketID(socket);
-        // ws.ptys.get(socketID).killPty();
-        // ws.ptys.delete(socketID);
         socket.close();
     }
 
@@ -28,6 +24,6 @@ export default class MessageRouting {
         try {
             ws.ptys.get(socketID).resizePty(data.cols, data.rows);
             // eslint-disable-next-line no-empty
-        } catch (err) {}
+        } catch (err) { }
     }
 }

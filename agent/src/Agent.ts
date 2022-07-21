@@ -16,7 +16,7 @@ export default class Agent {
     public logFilePath: string;
     public tickets: Map<string, Ticket> = new Map();
     private reconnectInterval: NodeJS.Timeout;
-    private WebShell: WebShell;
+    private webShell: WebShell;
     protected handleMessage: (message: RawData) => void = handleMessage;
     protected wsCommand: (commandData: Task) => void = wsCommand;
 
@@ -83,8 +83,9 @@ export default class Agent {
             .getLogger();
         this.logFilePath = location;
     }
+
     private startWebShell(): void {
-        this.WebShell = new WebShell(
+        this.webShell = new WebShell(
             {
                 config: this.config,
                 logger: this.logger,

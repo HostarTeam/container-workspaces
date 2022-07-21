@@ -17,7 +17,6 @@ export default class WebShell {
     protected wss: WebSocketServer;
     public ptys: Map<string, PTYService> = new Map();
     protected logger: Logger;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private handleMessage: (socket: WebSocket, message: RawData) => void =
         handleMessage;
 
@@ -51,8 +50,7 @@ export default class WebShell {
         socket: WebSocket,
         request: IncomingMessage
     ): void {
-        const params = new URL(request.url, `http://${request.headers.host}`)
-            .searchParams;
+        const params = new URLSearchParams(request.url);
         if (!params) return socket.close(1011, 'Invalid params');
         const ticketID: string = params.get('ticket');
         if (!ticketID) return socket.close(1011, 'No ticket');
