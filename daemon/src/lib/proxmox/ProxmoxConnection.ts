@@ -1,8 +1,9 @@
 import { MySQLClient } from '@hostarteam/mysqlclient';
+import { Agent } from 'https';
 import { Logger } from 'log4js';
+import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { httpProtocol } from '../typing/types';
 import { getNodesName, printSuccess } from '../util/utils';
-import ContainerWorkspaces from '../../ContainerWorkspaces';
 import {
     addCotainerToDatabase,
     addIPToDatabase,
@@ -10,13 +11,16 @@ import {
     call,
     changeContainerStatus,
     changeCTHostname,
-    returnNodeIfFine,
+    createBackup,
     createContainer,
     createContainerInProxmox,
+    deleteBackup,
     deleteContainer,
     deleteContainerFromDB,
+    deleteSnapshot,
     getAuthKeys,
     getAvailableLocations,
+    getBackups,
     getContainerInfo,
     getContainerIP,
     getContainers,
@@ -30,15 +34,22 @@ import {
     getNodeByLocation,
     getNodeIP,
     getNodeOfContainer,
-    getNodes,
-    getPVENode,
+    getNodes, getPVENode,
+    getSnapshotLXC,
+    getSnapshots,
     getSQLNode,
     getSQLNodes,
+    getStorageNames,
+    getStorageNamesAndAvailSize,
+    getStorageOfBackup,
+    getStorages,
     removeIPFromDatabase,
     removeNodeFromDatabase,
-    setCTAsReady,
-    updateIPUsedStatus,
+    restoreBackup,
+    returnNodeIfFine,
     scoreNode,
+    setCTAsReady,
+    updateIPUsedStatus
 } from './apiTools';
 
 export default class ProxmoxConnection {
@@ -51,6 +62,8 @@ export default class ProxmoxConnection {
     protected pveLogger: Logger;
     protected mySQLClient: MySQLClient;
     protected cw: ContainerWorkspaces;
+    protected httpsAgent: Agent | undefined;
+    protected verifyCertificate: boolean;
 
     protected authCookie = '';
     protected csrfPreventionToken = '';
@@ -68,6 +81,10 @@ export default class ProxmoxConnection {
     protected updateIPUsedStatus = updateIPUsedStatus;
     protected addCotainerToDatabase = addCotainerToDatabase;
     protected deleteContainerFromDB = deleteContainerFromDB;
+    protected getStorages = getStorages;
+    protected getStorageNamesAndAvailSize = getStorageNamesAndAvailSize;
+    protected getStorageNames = getStorageNames;
+    protected getStorageOfBackup = getStorageOfBackup;
     public getContainerIP = getContainerIP;
     public getNodeOfContainer = getNodeOfContainer;
     public getContainerInfo = getContainerInfo;
@@ -90,6 +107,13 @@ export default class ProxmoxConnection {
     public getContainers = getContainers;
     public getContainerStatuses = getContainerStatuses;
     public scoreNode = scoreNode;
+    public createBackup = createBackup;
+    public deleteBackup = deleteBackup;
+    public restoreBackup = restoreBackup;
+    public getBackups = getBackups;
+    public getSnapshots = getSnapshots;
+    public getSnapshotLXC = getSnapshotLXC;
+    public deleteSnapshot = deleteSnapshot;
 
     constructor({
         hostname,
@@ -100,6 +124,7 @@ export default class ProxmoxConnection {
         pveLogger,
         mySQLClient,
         cw,
+        verifyCertificate = true
     }: {
         hostname: string;
         protocol: httpProtocol;
@@ -109,6 +134,7 @@ export default class ProxmoxConnection {
         pveLogger: Logger;
         mySQLClient: MySQLClient;
         cw: ContainerWorkspaces;
+        verifyCertificate: boolean;
     }) {
         this.cw = cw;
         this.hostname = hostname;
@@ -118,6 +144,8 @@ export default class ProxmoxConnection {
         this.port = port;
         this.pveLogger = pveLogger;
         this.mySQLClient = mySQLClient;
+        this.verifyCertificate = verifyCertificate;
+
         this.intialize();
         this.connect().then(() => {
             printSuccess('Connected to the PVE api');
@@ -130,10 +158,14 @@ export default class ProxmoxConnection {
      * @method
      * @returns {void}
      */
-    private intialize() {
+    private intialize(): void {
         if (this.port != 80)
             this.basicURL = `${this.protocol}://${this.hostname}:${this.port}/api2/extjs`;
         else this.basicURL = `${this.protocol}://${this.hostname}/api2/extjs`;
+
+        if (this.protocol === 'https' && !this.verifyCertificate) {
+            this.httpsAgent = new Agent({ rejectUnauthorized: false });
+        }
     }
 
     /**
@@ -143,7 +175,7 @@ export default class ProxmoxConnection {
      * @async
      * @returns {Promise<void>}
      */
-    private async connect() {
+    private async connect(): Promise<void> {
         await this.getAuthKeys();
         this.pveLogger.info(
             `Connected successfully to ${this.protocol}://${this.hostname}:${this.port}/`

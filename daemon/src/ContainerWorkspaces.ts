@@ -7,6 +7,7 @@ import { initContainerRouter } from './lib/routers/container';
 import {
     checkAuthToken,
     checkIP,
+    checkContainerID,
     createLoggers,
     printSuccess,
     sleep,
@@ -52,6 +53,7 @@ export default class ContainerWorkspaces {
     protected handleMessage = handleMessage;
     protected wsCommand = wsCommand;
     protected checkIP = checkIP;
+    protected checkContainerID = checkContainerID;
     protected sendTaskToAgent = sendTaskToAgent;
     protected httpLoggerMiddleware = httpLoggerMiddleware;
     protected authMiddleware = authMiddleware;
@@ -96,6 +98,7 @@ export default class ContainerWorkspaces {
             pveLogger: this.pveLogger,
             mySQLClient: this.mySQLClient,
             cw: this,
+            verifyCertificate: false
         });
     }
 
@@ -431,6 +434,38 @@ export default class ContainerWorkspaces {
                 next();
             }
         };
+    }
+
+    /**
+     * Validates the containerID of the request
+     * @protected
+     * @method
+     * @returns {Handler}
+     */
+    protected validateContainerID(): Handler {
+        return async (req, res, next) => {
+            if (isNaN(Number(req.params.containerID)))
+                return res.status(400).send({
+                    status: 'bad request',
+                    message: 'containerID must be a number',
+                });
+            const containerID = Number(req.params.containerID);
+            const node = await this.proxmoxClient.getNodeOfContainer(containerID);
+
+            if (!node) {
+                res.status(404).send({
+                    status: 'not found',
+                    message: 'Could not find container with such ID',
+                });
+            } else if (!await this.checkContainerID(containerID)) {
+                res.status(406).send({
+                    status: 'not acceptable',
+                    message:
+                        'Specified ID belongs to a container which is not managed by our services',
+                });
+            } else
+                next();
+        }
     }
 
     /**

@@ -101,6 +101,23 @@ export async function checkIP(
 }
 
 /**
+ * Check if the given containerID is present in the database
+ * @async
+ * @param  {number} containerID
+ * @returns {Promise<boolean>}
+ */
+export async function checkContainerID(
+    this: ContainerWorkspaces,
+    containerID: number
+): Promise<boolean> {
+    const sql = 'SELECT id from cts';
+    const cts: { id?: number }[] = await this.mySQLClient.getQueryResult(sql);
+    const ids: number[] = cts.map((x) => x['id']);
+
+    return ids.includes(containerID);
+}
+
+/**
  * Create loggers with Log4js
  * @param  {string[]} logsName
  * @param  {string} logDir

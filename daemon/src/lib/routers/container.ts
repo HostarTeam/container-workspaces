@@ -33,7 +33,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      */
     router.get(
         '/:containerID',
-        this.getContainerIP(),
+        this.validateContainerID(),
         async (req: Request, res: Response) => {
             const containerID = Number(req.params.containerID);
             const container: LXC = await this.proxmoxClient.getContainerInfo(
@@ -50,7 +50,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      */
     router.get(
         '/:containerID/status',
-        this.getContainerIP(),
+        this.validateContainerID(),
         async (req: Request, res: Response) => {
             const containerID = Number(req.params.containerID);
             const status: ContainerStatus =
@@ -106,7 +106,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      * @param {string} containerID
      * This route is used in order to start a container.
      */
-    router.patch('/:containerID/start', async (req: Request, res: Response) => {
+    router.patch('/:containerID/start', this.validateContainerID(), async (req: Request, res: Response) => {
         await this.triggerStatusChange(req, res, 'start');
     });
 
@@ -116,6 +116,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      */
     router.patch(
         '/:containerID/shutdown',
+        this.validateContainerID(),
         async (req: Request, res: Response) => {
             await this.triggerStatusChange(req, res, 'shutdown');
         }
@@ -125,7 +126,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      * @param {string} containerID
      * This route is used in order to stop a container.
      */
-    router.patch('/:containerID/stop', async (req: Request, res: Response) => {
+    router.patch('/:containerID/stop', this.validateContainerID(), async (req: Request, res: Response) => {
         await this.triggerStatusChange(req, res, 'stop');
     });
 
@@ -135,6 +136,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      */
     router.patch(
         '/:containerID/reboot',
+        this.validateContainerID(),
         async (req: Request, res: Response) => {
             await this.triggerStatusChange(req, res, 'reboot');
         }
@@ -146,6 +148,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      */
     router.patch(
         '/:containerID/suspend',
+        this.validateContainerID(),
         async (req: Request, res: Response) => {
             await this.triggerStatusChange(req, res, 'suspend');
         }
@@ -157,10 +160,93 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      */
     router.patch(
         '/:containerID/resume',
+        this.validateContainerID(),
         async (req: Request, res: Response) => {
             await this.triggerStatusChange(req, res, 'resume');
         }
     );
+
+    /**
+     * @param {string} containerID
+     * This route is used in order to backup a container.
+     */
+    router.post('/:containerID/backup', this.validateContainerID(), async (req: Request, res: Response) => {
+        const containerID = Number(req.params.containerID);
+        const result = await this.proxmoxClient.createBackup(containerID);
+        if (!result.ok)
+            return res.status(500).send({
+                status: 'error',
+                message: result.error,
+            });
+        return res.send({
+            status: 'ok',
+            message: 'backup created',
+        });
+    });
+
+    /**
+     * @param {string} containerID
+     * @param {string} backupID
+     * This route is used in order to restore a backup of a container.
+     */
+    router.post(
+        '/:containerID/backup/:backupID/restore',
+        this.validateContainerID(),
+        async (req: Request, res: Response) => {
+            const containerID = Number(req.params.containerID);
+            const backupID = String(req.params.backupID);
+            const result = await this.proxmoxClient.restoreBackup(
+                containerID,
+                backupID
+            );
+            if (!result.ok)
+                return res.status(500).send({
+                    status: 'error',
+                    message: result.error,
+                });
+            return res.send({
+                status: 'ok',
+                message: 'backup restored',
+            });
+        }
+    );
+
+    /**
+     * @param {string} containerID
+     * @param {string} backupID
+     * This route is used in order to delete a backup of a container.
+     */
+    router.delete(
+        '/:containerID/backup/:backupID',
+        this.validateContainerID(),
+        async (req: Request, res: Response) => {
+            const containerID = Number(req.params.containerID);
+            const backupID = String(req.params.backupID);
+            const result = await this.proxmoxClient.deleteBackup(
+                containerID,
+                backupID
+            );
+            if (!result.ok)
+                return res.status(500).send({
+                    status: 'error',
+                    message: result.error,
+                });
+            return res.send({
+                status: 'ok',
+                message: 'backup deleted',
+            });
+        }
+    );
+
+    /**
+     * @param {string} containerID
+     * This route is used in order to get the backups of a container.
+     */
+    router.get('/:containerID/backup', this.validateContainerID(), async (req: Request, res: Response) => {
+        const containerID = Number(req.params.containerID);
+        const backups = await this.proxmoxClient.getBackups(containerID);
+        return res.send(backups);
+    });
 
     /**
      * @param {string} containerID

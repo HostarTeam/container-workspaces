@@ -3,12 +3,15 @@ import ProxmoxConnection from './ProxmoxConnection';
 import { netmaskToCIDR, printError } from '../util/utils';
 import {
     ActionResult,
+    Backup,
     ClusterNode,
     ContainerStatus,
     LXC,
     Node,
     ProxmoxResponse,
+    Snapshot,
     status,
+    Storage,
 } from '../typing/types';
 import { CreateCTOptions, CTHardwareOptions } from '../typing/options';
 import SQLNode from '../entities/SQLNode';
@@ -40,10 +43,12 @@ export async function call<T>(
         method: method,
     };
 
+    if (this.protocol === 'https' && !this.verifyCertificate)
+        options['agent'] = this.httpsAgent;
     if (['POST', 'PUT', 'DELETE'].includes(method.toUpperCase()))
         options.headers['CSRFPreventionToken'] = this.csrfPreventionToken;
     if (body) {
-        options['Content-Type'] = 'application/json';
+        options.headers['Content-Type'] = 'application/json';
         options.body = JSON.stringify(body);
     }
 
@@ -218,13 +223,16 @@ export async function getAvailableLocations(
  */
 export async function getAuthKeys(this: ProxmoxConnection): Promise<void> {
     try {
+        const options: RequestInit = { method: 'POST' };
+
+        if (this.protocol === 'https' && !this.verifyCertificate)
+            options['agent'] = this.httpsAgent;
+
         const username = `${this.username}@pam`,
             password = this.password;
         const res: Response = await fetch(
             `${this.basicURL}/access/ticket?username=${username}&password=${password}`,
-            {
-                method: 'POST',
-            }
+            options
         );
         const { data } = await res.json();
         this.authCookie = data.ticket;
@@ -803,4 +811,265 @@ export async function getContainerStatuses(
         if (containerData) containerStatusesAsPromises.push(containerData);
     }
     return await Promise.all(containerStatusesAsPromises);
+}
+
+export async function getStorages(
+    this: ProxmoxConnection,
+    nodename: string
+): Promise<Storage[]> {
+    const res = await this.call<Storage[]>(
+        `nodes/${nodename}/storage?format=1&content=backup`,
+        'GET'
+    );
+    if (!res) return [];
+    let storages = res.data;
+    storages = storages.filter(
+        (storage) =>
+            storage.used_fraction * 100 < 90 ||
+            !!storage.enabled ||
+            !!storage.active
+    );
+    return storages;
+}
+
+export async function getStorageNamesAndAvailSize(
+    this: ProxmoxConnection,
+    nodename: string
+): Promise<{ storage: string; avail: number }[]> {
+    const storages = await this.getStorages(nodename);
+    return storages.map((storage) => {
+        return { storage: storage.storage, avail: storage.avail };
+    });
+}
+
+export async function getStorageNames(
+    this: ProxmoxConnection,
+    nodename: string
+): Promise<string[]> {
+    const storages = await this.getStorages(nodename);
+    return storages.map((storage) => storage.storage);
+}
+
+export async function getStorageOfBackup(
+    this: ProxmoxConnection,
+    nodename: string,
+    backupID: string
+): Promise<string | null> {
+    const storages = await this.getStorageNames(nodename);
+    for (const storage of storages) {
+        const res = await this.call<string>(
+            `nodes/${nodename}/storage/${storage}/content/${storage}:backup/${backupID}`,
+            'GET'
+        );
+        if (res?.data) return storage;
+    }
+
+    return null;
+}
+
+export async function createBackup(
+    this: ProxmoxConnection,
+    containerID: number
+): Promise<ActionResult<string>> {
+    const node = await this.getNodeOfContainer(containerID);
+    const storages = await this.getStorageNamesAndAvailSize(node);
+    if (storages.length < 1) return { error: 'No storage found', ok: false };
+
+    let index = 0;
+    const containerStatus = await this.getContainerStatus(containerID);
+    while (storages[index].avail < containerStatus.disk * 0.5) {
+        index++;
+        if (index >= storages.length)
+            return { error: 'Not enough space', ok: false };
+    }
+
+    const storage: string = storages[index].storage;
+    const res = await this.call<string | null>(`nodes/${node}/vzdump`, 'POST', {
+        storage,
+        vmid: containerID,
+        mode: 'snapshot',
+        remove: '0',
+        compress: 'zstd',
+    });
+
+    if (!res.data)
+        return { error: res.message || "Couldn't create backup", ok: false };
+    return { ok: true, data: res.data };
+}
+
+export async function deleteBackup(
+    this: ProxmoxConnection,
+    containerID: number,
+    backupID: string
+): Promise<ActionResult<string>> {
+    const node = await this.getNodeOfContainer(containerID);
+    const storage = await this.getStorageOfBackup(node, backupID);
+    if (!storage) return { error: 'No storage found', ok: false };
+
+    const res = await this.call<string | null>(
+        `nodes/${node}/storage/${storage}/content/${storage}:backup/${backupID}`,
+        'DELETE'
+    );
+    if (!res.success)
+        return { error: res.message || "Couldn't delete backup", ok: false };
+    return { ok: true, data: res.data };
+}
+
+export async function getBackups(
+    this: ProxmoxConnection,
+    containerID: number
+): Promise<Backup[]> {
+    let backups: Backup[] = [];
+    const node = await this.getNodeOfContainer(containerID);
+    const storages: string[] = await this.getStorageNames(node);
+
+    for (const storage of storages) {
+        const res = await this.call<Backup[]>(
+            `nodes/${node}/storage/${storage}/content?content=backup&vmid=${containerID}`,
+            'GET'
+        );
+        if (!res.data) continue;
+        const tempBackups = res.data.map(
+            (backup) =>
+                <Backup>{
+                    storage,
+                    notes: backup.notes,
+                    size: backup.size,
+                    ctime: backup.ctime,
+                    volid: backup.volid,
+                    backupid: backup.volid.split('backup/')[1],
+                    format: backup.format,
+                }
+        );
+        // concat the tempBackups that we found in the storage to the global backups array
+        backups = backups.concat(tempBackups);
+    }
+
+    return backups;
+}
+
+export async function restoreBackup(
+    this: ProxmoxConnection,
+    containerID: number,
+    backupID: string
+): Promise<ActionResult<string>> {
+    const node = await this.getNodeOfContainer(containerID);
+    const storage = await this.getStorageOfBackup(node, backupID);
+    if (!storage) return { error: 'No storage found', ok: false };
+
+    const res = await this.call<string>(`nodes/${node}/lxc`, 'POST', {
+        vmid: containerID,
+        force: 1,
+        storage,
+        ostemplate: `${storage}:backup/${backupID}`,
+        restore: 1,
+        start: 1,
+        node,
+    });
+    if (!res.success)
+        return { error: res.message || "Couldn't restore backup", ok: false };
+    return { ok: true, data: res.data };
+}
+
+export async function ctHasFeature(
+    this: ProxmoxConnection,
+    containerID: number,
+    feature: string
+): Promise<boolean> {
+    const node = await this.getNodeOfContainer(containerID);
+    const res = await this.call<{ hasFeature: boolean }>(
+        `nodes/${node}/feature?feature=${feature}`,
+        'GET'
+    );
+    if (res.success === 1) return res.data.hasFeature;
+    return false;
+}
+
+export async function getSnapshots(
+    this: ProxmoxConnection,
+    containerID: number
+): Promise<Snapshot[]> {
+    const node = await this.getNodeOfContainer(containerID);
+    const res = await this.call<Snapshot[]>(
+        `nodes/${node}/lxc/${containerID}/snapshot`,
+        'GET'
+    );
+    if (!res.data) return [];
+    return res.data;
+}
+
+export async function getSnapshotLXC(
+    this: ProxmoxConnection,
+    containerID: number,
+    snapshotName: string
+): Promise<LXC | null> {
+    const node = await this.getNodeOfContainer(containerID);
+    const res = await this.call<LXC | null>(
+        `nodes/${node}/lxc/${containerID}/snapshot/${snapshotName}/config`,
+        'GET'
+    );
+
+    if (!res.data) return null;
+
+    return res.data;
+}
+
+export async function deleteSnapshot(
+    this: ProxmoxConnection,
+    containerID: number,
+    snapshotName: string
+): Promise<ActionResult<string>> {
+    const node = await this.getNodeOfContainer(containerID);
+
+    const snapshotExists = !!(await this.getSnapshotLXC(
+        containerID,
+        snapshotName
+    ));
+
+    if (!snapshotExists) return { error: 'Snapshot does not exist', ok: false };
+
+    const res = await this.call<string | null>(
+        `nodes/${node}/lxc/${containerID}/snapshot/${snapshotName}`,
+        'DELETE'
+    );
+    if (!res.success)
+        return { error: res.message || "Couldn't delete snapshot", ok: false };
+    return { ok: true, data: res.data };
+}
+
+export async function createSnapshot(
+    this: ProxmoxConnection,
+    containerID: number,
+    options: Omit<Snapshot, 'parent' | 'snaptime'>
+): Promise<ActionResult<string>> {
+    const node = await this.getNodeOfContainer(containerID);
+    const res = await this.call<string | null>(
+        `nodes/${node}/lxc/${containerID}/snapshot`,
+        'POST',
+        {
+            snapname: options.name,
+            description: options.description,
+        }
+    );
+    if (!res.success)
+        return { error: res.message || "Couldn't create snapshot", ok: false };
+    return { ok: true, data: res.data };
+}
+
+export async function rollbackSnapshot(
+    this: ProxmoxConnection,
+    containerID: number,
+    snapshotName: string
+): Promise<ActionResult<string>> {
+    const node = await this.getNodeOfContainer(containerID);
+    const res = await this.call<string | null>(
+        `nodes/${node}/lxc/${containerID}/snapshot/${snapshotName}/rollback`,
+        'POST'
+    );
+    if (!res.success)
+        return {
+            error: res.message || "Couldn't rollback snapshot",
+            ok: false,
+        };
+    return { ok: true, data: res.data };
 }

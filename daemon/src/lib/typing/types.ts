@@ -260,10 +260,42 @@ export interface Ticket {
 }
 
 export interface Backup {
-    vmid: number;
+    notes?: string; // The backup notes
+    vmid?: number;
     size: number; // The size of the backup in bytes
     ctime: number; // The creation time of the backup in seconds
     volid: string; // The volume id of the backup
+    backuid?: string; // The backup id
     format: string; // the format file of the backup for example: 'tar.zst'
-    content: string | 'backup'; // The content type of the data that has been recieved from the storage
+    content?: string | 'backup'; // The content type of the data that has been recieved from the storage
+}
+
+// export interface BackupE2 {
+//     volid: string;
+//     ctime: number;
+//     mark: 'keep' | 'remove' | 'protected' | 'renamed';
+//     vmid: number;
+//     type: 'lxc' | 'qemu';
+// }
+
+// export interface Backup extends BackupE1, BackupE2 {}
+
+export interface Storage {
+    total: number; // the total size of storage in bytes
+    used_fraction: number; // the used fraction of storage in percent / 100
+    content: string; // the content type of the storage for example "backup,vztmpl,iso"
+    storage: string; // the storage name
+    type: string; // the storage type for example "dir"
+    enabled: 0 | 1; // is the storage enabled
+    avail: 0 | 1; // is the storage available
+    shared: 0 | 1; // is the storage shared
+    used: number; // the used size of storage in bytes
+    active: 0 | 1; // is the storage active
+}
+
+export interface Snapshot {
+    name: string; // the name of the snapshot
+    description: string; // the description of the snapshot - can also be ''
+    parent?: string; // id of the parent snapshot
+    snaptime?: number; // the creation time of the snapshot in seconds
 }
