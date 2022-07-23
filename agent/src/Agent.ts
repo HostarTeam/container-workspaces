@@ -31,8 +31,7 @@ export default class Agent {
 
         this.ws.on('open', () => {
             printSuccess(
-                `${isReconnection ? 'Rec' : 'C'}onnected to ${
-                    this.config.socketServer
+                `${isReconnection ? 'Rec' : 'C'}onnected to ${this.config.socketServer
                 }`
             );
         });
@@ -50,6 +49,9 @@ export default class Agent {
 
         this.ws.on('error', (err) => {
             if (err.message.includes('connect ECONNREFUSED')) {
+                this.logger.error(err.message);
+                this.reconnectToWS();
+            } else if (err.message === 'unable to verify the first certificate') {
                 this.logger.error(err.message);
                 this.reconnectToWS();
             }
