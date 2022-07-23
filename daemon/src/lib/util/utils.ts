@@ -4,7 +4,7 @@ import { Handler, NextFunction, Request, Response } from 'express';
 import ProxmoxConnection from '../proxmox/ProxmoxConnection';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import log4js, { Log4js } from 'log4js';
-import { compareSync } from 'bcrypt';
+import { compareSync } from 'bcryptjs';
 
 enum Colors {
     Reset = '\x1b[0m',

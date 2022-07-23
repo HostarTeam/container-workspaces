@@ -1,0 +1,5 @@
+Package: container-workspaces-daemon
+Version: 1.0
+Architecture: amd64
+Maintainer: Uri Bar Ilan <ubarilan@gmail.com>
+Description: Container Workspaces Daemon

@@ -8,7 +8,8 @@
         "start": "node .",
         "build": "tsc -p .",
         "lint": "eslint . --ext .ts",
-        "compile": "tsc -p . && pkg . --output cw-daemon"
+        "compile": "npm run build && pkg . --output build/usr/bin/cw-daemon",
+        "build-deb": "npm run compile && dpkg --build build/ cw-daemon.deb"
     },
     "repository": {
         "type": "git",
@@ -23,7 +24,7 @@
     "dependencies": {
         "@hostarteam/mysqlclient": "^1.0.6",
         "@types/http-proxy": "^1.17.8",
-        "bcrypt": "^5.0.1",
+        "bcryptjs": "^2.4.3",
         "cors": "^2.8.5",
         "express": "^4.17.2",
         "http-proxy": "^1.18.1",
@@ -33,7 +34,7 @@
         "ws": "^8.4.0"
     },
     "devDependencies": {
-        "@types/bcrypt": "^5.0.0",
+        "@types/bcryptjs": "^2.4.2",
         "@types/cors": "^2.8.12",
         "@types/dockerode": "^3.3.1",
         "@types/express": "^4.17.13",
