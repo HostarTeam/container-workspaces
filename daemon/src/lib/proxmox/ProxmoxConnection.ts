@@ -34,7 +34,9 @@ import {
     getNodeByLocation,
     getNodeIP,
     getNodeOfContainer,
-    getNodes, getPVENode,
+    getNodes,
+    getPVENode,
+    getResources,
     getSnapshotLXC,
     getSnapshots,
     getSQLNode,
@@ -49,7 +51,7 @@ import {
     returnNodeIfFine,
     scoreNode,
     setCTAsReady,
-    updateIPUsedStatus
+    updateIPUsedStatus,
 } from './apiTools';
 
 export default class ProxmoxConnection {
@@ -85,6 +87,7 @@ export default class ProxmoxConnection {
     protected getStorageNamesAndAvailSize = getStorageNamesAndAvailSize;
     protected getStorageNames = getStorageNames;
     protected getStorageOfBackup = getStorageOfBackup;
+    protected getResources = getResources;
     public getContainerIP = getContainerIP;
     public getNodeOfContainer = getNodeOfContainer;
     public getContainerInfo = getContainerInfo;
@@ -124,7 +127,7 @@ export default class ProxmoxConnection {
         pveLogger,
         mySQLClient,
         cw,
-        verifyCertificate = true
+        verifyCertificate = true,
     }: {
         hostname: string;
         protocol: httpProtocol;

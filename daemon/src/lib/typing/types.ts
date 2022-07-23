@@ -303,3 +303,25 @@ export interface Snapshot {
     parent?: string; // id of the parent snapshot
     snaptime?: number; // the creation time of the snapshot in seconds
 }
+
+export interface VMResource {
+    vmid: number; // the id of the VM
+    type: 'vm' | 'lxc'; // the type of the resource
+    name: string; // the name of the resource
+    content: string; // the content type of the resource for example "backup,vztmpl,iso"
+    cpu: number; // the cpu usage in percent
+    disk: string; // the disk usage in bytes
+    hstate: string;
+    mem: number; // the memory usage in bytes
+    netin: string; // the network in in bytes
+    netout: string; // the network out in bytes
+    level: string; // the support level of the resource
+    status: 'running' | 'stopped'; // the status of the resource
+    maxmem: number; // the max memory size in bytes
+    maxdisk: number; // the max disk size in bytes
+    node: string; // the node name
+    plugintype: string; // the plugin type of the resource
+    pool: string; // the pool name
+    storage: string; // the storage name
+    uptime: number; // the uptime in seconds
+}

@@ -12,6 +12,7 @@ import {
     Snapshot,
     status,
     Storage,
+    VMResource,
 } from '../typing/types';
 import { CreateCTOptions, CTHardwareOptions } from '../typing/options';
 import SQLNode from '../entities/SQLNode';
@@ -42,18 +43,22 @@ export async function call<T>(
         },
         method: method,
     };
+    let urlParams = null;
 
     if (this.protocol === 'https' && !this.verifyCertificate)
         options['agent'] = this.httpsAgent;
     if (['POST', 'PUT', 'DELETE'].includes(method.toUpperCase()))
         options.headers['CSRFPreventionToken'] = this.csrfPreventionToken;
-    if (body) {
+    if (body && method.toUpperCase() === 'GET') {
+        urlParams = new URLSearchParams(body);
+    }
+    else if (body) {
         options.headers['Content-Type'] = 'application/json';
         options.body = JSON.stringify(body);
     }
 
     try {
-        const res: Response = await fetch(`${this.basicURL}/${path}`, options);
+        const res: Response = await fetch(`${this.basicURL}/${path}${urlParams ? `?${urlParams}` : ''}`, options);
         if (res.status == 401) {
             this.pveLogger.warn(
                 `${method.toUpperCase()} - ${path} - ${res.status}`
@@ -68,8 +73,7 @@ export async function call<T>(
         return jsonRes;
     } catch (err) {
         this.pveLogger.error(
-            `${method.toUpperCase()} - ${path} - ${
-                err.message || 'no error message'
+            `${method.toUpperCase()} - ${path} - ${err.message || 'no error message'
             }`
         );
         throw err;
@@ -468,9 +472,8 @@ export async function createContainerInProxmox(
             rootfs: `local-lvm:${options.ct_disk}`,
             memory: options.ct_ram,
             swap: options.ct_swap,
-            net0: `name=eth0,bridge=vmbr0,firewall=1,gw=${ip.gateway},ip=${
-                ip.ipv4
-            }/${netmaskToCIDR(ip.netmask)},type=veth`,
+            net0: `name=eth0,bridge=vmbr0,firewall=1,gw=${ip.gateway},ip=${ip.ipv4
+                }/${netmaskToCIDR(ip.netmask)},type=veth`,
             start: true,
         };
         const res = await this.call(`nodes/${node}/lxc`, 'POST', body);
@@ -622,6 +625,21 @@ export async function getNodeByLocation(
 }
 
 /**
+ * Get the resources of a node.
+ * @async
+ * @returns {Promise<VMResource>}
+ */
+export async function getResources(
+    this: ProxmoxConnection
+): Promise<VMResource[]> {
+    return (
+        await this.call<VMResource[]>('cluster/resources', 'GET', {
+            type: 'vm',
+        })
+    ).data;
+}
+
+/**
  * Get the node a given container is running on
  * @async
  * @param  {number} id
@@ -631,13 +649,10 @@ export async function getNodeOfContainer(
     this: ProxmoxConnection,
     id: number
 ): Promise<string> {
-    const nodes = await this.getNodes();
-    for (const node of nodes) {
-        const res = await this.call(`nodes/${node.node}/lxc/${id}`, 'GET');
-
-        if (res.data) return node.node;
-    }
-    return null;
+    const resources = await this.getResources();
+    const resource = resources.find((x) => x.vmid == id);
+    if (!resource) return null;
+    return resource.node;
 }
 
 /**
