@@ -10,6 +10,10 @@ export interface Configuration {
     listenPort: number;
     remoteAddress: string;
     remotePort: number;
+    sslOptions?: {
+        cert: string;
+        key: string;
+    };
     protocol: 'http' | 'https';
     database: {
         host: string;

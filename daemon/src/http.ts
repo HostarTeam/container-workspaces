@@ -1,8 +1,10 @@
 import cors from 'cors';
 import express, { json, urlencoded } from 'express';
-import { createServer } from 'http';
+import { existsSync, readFileSync } from 'fs';
+import { createServer as createHttpServer } from 'http';
+import { createServer as createHttpsServer } from 'https';
 import ContainerWorkspaces from './ContainerWorkspaces';
-import { printSuccess } from './lib/util/utils';
+import { printError, printSuccess } from './lib/util/utils';
 
 /**
  * Setup the http server
@@ -10,7 +12,26 @@ import { printSuccess } from './lib/util/utils';
  * @returns {void}
  */
 export default function setupHttp(this: ContainerWorkspaces): void {
-    this.httpServer = createServer();
+    if (this.protocol === 'http') {
+        this.httpServer = createHttpServer();
+    } else if (this.protocol === 'https') {
+        if (!existsSync(this.sslOptions.key)) {
+            printError(`The key file '${this.sslOptions.key}' does not exist.`);
+            process.exit(1);
+        } else if (!existsSync(this.sslOptions.cert)) {
+            printError(
+                `The cert file '${this.sslOptions.cert}' does not exist.`
+            );
+            process.exit(1);
+        }
+        this.httpServer = createHttpsServer({
+            key: readFileSync(this.sslOptions.key, { encoding: 'utf-8' }),
+            cert: readFileSync(this.sslOptions.cert, { encoding: 'utf-8' }),
+        });
+    } else {
+        printError(`Unknown protocol '${this.protocol}'`);
+        process.exit(1);
+    }
 
     this.webApp = express();
     this.initRouters();

@@ -1,5 +1,6 @@
 import { Application, Router, Request, Response, Handler } from 'express';
-import { Server } from 'http';
+import { Server as HttpServer } from 'http';
+import { Server as HttpsServer } from 'https';
 import { Log4js, Logger } from 'log4js';
 import { initMainRouter } from './lib/routers/main';
 import { initAgentRouter } from './lib/routers/agent';
@@ -31,12 +32,13 @@ import { parse } from 'path';
 import { createProxyServer } from 'http-proxy';
 
 export default class ContainerWorkspaces {
-    protected httpServer: Server;
+    protected httpServer: HttpServer | HttpsServer;
     protected readonly listenAddress: string;
     protected readonly listenPort: number;
     protected readonly remoteAddress: string;
     protected readonly remotePort: number;
     protected readonly protocol: Configuration['protocol'];
+    protected readonly sslOptions: Configuration['sslOptions'];
 
     private log4js: Log4js;
     public mainLogger: Logger;
@@ -75,6 +77,7 @@ export default class ContainerWorkspaces {
         remoteAddress,
         remotePort,
         protocol,
+        sslOptions,
         database: databaseConf,
         pve: PVEConf,
     }: Configuration) {
@@ -83,6 +86,7 @@ export default class ContainerWorkspaces {
         this.remoteAddress = remoteAddress;
         this.remotePort = remotePort;
         this.protocol = protocol;
+        this.sslOptions = sslOptions;
         this.configureLoggers();
 
         this.setupHttp();
@@ -98,7 +102,7 @@ export default class ContainerWorkspaces {
             pveLogger: this.pveLogger,
             mySQLClient: this.mySQLClient,
             cw: this,
-            verifyCertificate: false
+            verifyCertificate: false,
         });
     }
 
@@ -450,22 +454,23 @@ export default class ContainerWorkspaces {
                     message: 'containerID must be a number',
                 });
             const containerID = Number(req.params.containerID);
-            const node = await this.proxmoxClient.getNodeOfContainer(containerID);
+            const node = await this.proxmoxClient.getNodeOfContainer(
+                containerID
+            );
 
             if (!node) {
                 res.status(404).send({
                     status: 'not found',
                     message: 'Could not find container with such ID',
                 });
-            } else if (!await this.checkContainerID(containerID)) {
+            } else if (!(await this.checkContainerID(containerID))) {
                 res.status(406).send({
                     status: 'not acceptable',
                     message:
                         'Specified ID belongs to a container which is not managed by our services',
                 });
-            } else
-                next();
-        }
+            } else next();
+        };
     }
 
     /**

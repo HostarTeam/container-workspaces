@@ -21,11 +21,11 @@ class Entity {
         value: Value,
         validateProp: (value: Value) => boolean = () => true
     ): void {
-        if (!value) throw new Error(`Property: ${propName} is required`);
+        if (!value) throw new Error(`Property: ${String(propName)} is required`);
 
         const isValid = validateProp(value);
         if (!isValid)
-            throw new Error(`Property: ${propName} has an invalid value`);
+            throw new Error(`Property: ${String(propName)} has an invalid value`);
         this[propName] = value;
     }
 
@@ -41,7 +41,7 @@ class Entity {
         }
         const isValid = validateProp(value);
         if (!isValid)
-            throw new Error(`Property: ${propName} has an invalid value`);
+            throw new Error(`Property: ${String(propName)} has an invalid value`);
         this[propName] = value;
     }
 }
