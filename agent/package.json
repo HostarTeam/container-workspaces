@@ -8,7 +8,8 @@
         "start": "node .",
         "build": "tsc -p .",
         "lint": "eslint . --ext .ts",
-        "compile": "tsc -p . && pkg . --output cw-agent"
+        "compile": "npm run build && pkg . --output build/usr/bin/cw-agent",
+        "build-deb": "npm run compile && dpkg --build build/ cw-agent.deb"
     },
     "repository": {
         "type": "git",

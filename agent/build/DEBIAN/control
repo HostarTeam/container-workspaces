@@ -1,0 +1,5 @@
+Package: container-workspaces-agent
+Version: 1.0
+Architecture: amd64
+Maintainer: Uri Bar Ilan <ubarilan@gmail.com>
+Description: Container Workspaces Agent
