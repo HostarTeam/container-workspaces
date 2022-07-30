@@ -40,7 +40,7 @@ export function initAgentRouter(this: ContainerWorkspaces): void {
         res.send({ status: 'ok', message: 'report received' });
     });
 
-    router.patch('/inithostname', async (req: Request, res: Response) => {
+    router.get('/inithostname', async (req: Request, res: Response) => {
         const agentIP = req.ip;
         const containerID = await this.getContainerID(agentIP);
         if (!containerID)
