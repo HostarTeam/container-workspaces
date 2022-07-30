@@ -33,12 +33,12 @@ import { createProxyServer } from 'http-proxy';
 
 export default class ContainerWorkspaces {
     protected httpServer: HttpServer | HttpsServer;
-    protected readonly listenAddress: string;
-    protected readonly listenPort: number;
-    protected readonly remoteAddress: string;
-    protected readonly remotePort: number;
-    protected readonly protocol: Configuration['protocol'];
-    protected readonly sslOptions: Configuration['sslOptions'];
+    public readonly listenAddress: string;
+    public readonly listenPort: number;
+    public readonly remoteAddress: string;
+    public readonly remotePort: number;
+    public readonly protocol: Configuration['protocol'];
+    public readonly sslOptions: Configuration['sslOptions'];
 
     private log4js: Log4js;
     public mainLogger: Logger;

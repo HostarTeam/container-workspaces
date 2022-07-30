@@ -106,9 +106,13 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      * @param {string} containerID
      * This route is used in order to start a container.
      */
-    router.patch('/:containerID/start', this.validateContainerID(), async (req: Request, res: Response) => {
-        await this.triggerStatusChange(req, res, 'start');
-    });
+    router.patch(
+        '/:containerID/start',
+        this.validateContainerID(),
+        async (req: Request, res: Response) => {
+            await this.triggerStatusChange(req, res, 'start');
+        }
+    );
 
     /**
      * @param {string} containerID
@@ -126,9 +130,13 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      * @param {string} containerID
      * This route is used in order to stop a container.
      */
-    router.patch('/:containerID/stop', this.validateContainerID(), async (req: Request, res: Response) => {
-        await this.triggerStatusChange(req, res, 'stop');
-    });
+    router.patch(
+        '/:containerID/stop',
+        this.validateContainerID(),
+        async (req: Request, res: Response) => {
+            await this.triggerStatusChange(req, res, 'stop');
+        }
+    );
 
     /**
      * @param {string} containerID
@@ -170,19 +178,23 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      * @param {string} containerID
      * This route is used in order to backup a container.
      */
-    router.post('/:containerID/backup', this.validateContainerID(), async (req: Request, res: Response) => {
-        const containerID = Number(req.params.containerID);
-        const result = await this.proxmoxClient.createBackup(containerID);
-        if (!result.ok)
-            return res.status(500).send({
-                status: 'error',
-                message: result.error,
+    router.post(
+        '/:containerID/backup',
+        this.validateContainerID(),
+        async (req: Request, res: Response) => {
+            const containerID = Number(req.params.containerID);
+            const result = await this.proxmoxClient.createBackup(containerID);
+            if (!result.ok)
+                return res.status(500).send({
+                    status: 'error',
+                    message: result.error,
+                });
+            return res.send({
+                status: 'ok',
+                message: 'backup created',
             });
-        return res.send({
-            status: 'ok',
-            message: 'backup created',
-        });
-    });
+        }
+    );
 
     /**
      * @param {string} containerID
@@ -242,11 +254,15 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      * @param {string} containerID
      * This route is used in order to get the backups of a container.
      */
-    router.get('/:containerID/backup', this.validateContainerID(), async (req: Request, res: Response) => {
-        const containerID = Number(req.params.containerID);
-        const backups = await this.proxmoxClient.getBackups(containerID);
-        return res.send(backups);
-    });
+    router.get(
+        '/:containerID/backup',
+        this.validateContainerID(),
+        async (req: Request, res: Response) => {
+            const containerID = Number(req.params.containerID);
+            const backups = await this.proxmoxClient.getBackups(containerID);
+            return res.send(backups);
+        }
+    );
 
     /**
      * @param {string} containerID
@@ -373,7 +389,11 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
                 password,
             });
 
-            if (created.ok) res.status(201).send({ status: 'created' });
+            if (created.ok)
+                res.status(201).send({
+                    status: 'created',
+                    details: { ip: created.data.ip, id: created.data.id },
+                });
             else
                 res.status(409).send({
                     status: 'conflict',
@@ -414,12 +434,6 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
                         status: 'conflict',
                         message:
                             'Container with given ID is not connected to this server',
-                    });
-                } else if (err instanceof Error) {
-                    return res.status(500).send({
-                        status: 'error',
-                        message: 'Could not create ticket',
-                        error: err.message,
                     });
                 } else {
                     return res.status(500).send({

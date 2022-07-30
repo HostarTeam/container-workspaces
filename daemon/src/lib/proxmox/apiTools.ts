@@ -51,14 +51,16 @@ export async function call<T>(
         options.headers['CSRFPreventionToken'] = this.csrfPreventionToken;
     if (body && method.toUpperCase() === 'GET') {
         urlParams = new URLSearchParams(body);
-    }
-    else if (body) {
+    } else if (body) {
         options.headers['Content-Type'] = 'application/json';
         options.body = JSON.stringify(body);
     }
 
     try {
-        const res: Response = await fetch(`${this.basicURL}/${path}${urlParams ? `?${urlParams}` : ''}`, options);
+        const res: Response = await fetch(
+            `${this.basicURL}/${path}${urlParams ? `?${urlParams}` : ''}`,
+            options
+        );
         if (res.status == 401) {
             this.pveLogger.warn(
                 `${method.toUpperCase()} - ${path} - ${res.status}`
@@ -73,7 +75,8 @@ export async function call<T>(
         return jsonRes;
     } catch (err) {
         this.pveLogger.error(
-            `${method.toUpperCase()} - ${path} - ${err.message || 'no error message'
+            `${method.toUpperCase()} - ${path} - ${
+                err.message || 'no error message'
             }`
         );
         throw err;
@@ -407,7 +410,7 @@ export async function updateIPUsedStatus(
 export async function createContainer(
     this: ProxmoxConnection,
     { location, template, password }: CreateCTOptions
-): Promise<ActionResult> {
+): Promise<ActionResult<{ ip: string; id: number } | null>> {
     const config = this.cw.getConfig();
 
     const node = await this.getNodeByLocation(location);
@@ -453,7 +456,7 @@ export async function createContainerInProxmox(
         ip: SQLIP;
         password: string;
     }
-): Promise<ActionResult> {
+): Promise<ActionResult<{ ip: string; id: number } | null>> {
     try {
         const nextIDRes = await this.call<string>('cluster/nextid', 'GET');
         const nextID: string = nextIDRes.data;
@@ -467,13 +470,14 @@ export async function createContainerInProxmox(
             vmid: Number(nextID),
             cores: options.ct_cores,
             description: 'Created by the API',
-            hostname: nextID,
+            hostname: `${this.cw.protocol}491500${this.cw.remoteAddress}491500${this.cw.remotePort}`,
             password,
             rootfs: `local-lvm:${options.ct_disk}`,
             memory: options.ct_ram,
             swap: options.ct_swap,
-            net0: `name=eth0,bridge=vmbr0,firewall=1,gw=${ip.gateway},ip=${ip.ipv4
-                }/${netmaskToCIDR(ip.netmask)},type=veth`,
+            net0: `name=eth0,bridge=vmbr0,firewall=1,gw=${ip.gateway},ip=${
+                ip.ipv4
+            }/${netmaskToCIDR(ip.netmask)},type=veth`,
             start: true,
         };
         const res = await this.call(`nodes/${node}/lxc`, 'POST', body);
@@ -482,7 +486,11 @@ export async function createContainerInProxmox(
                 `LXC container with ID ${nextID} has been created successfully`
             );
             await this.addCotainerToDatabase(Number(nextID), ip.ipv4);
-            return { error: null, ok: true };
+            return {
+                error: null,
+                ok: true,
+                data: { ip: ip.ipv4, id: Number(nextID) },
+            };
         }
         this.pveLogger.error(
             `LXC container could not be created - ${res.errors.join(' - ')}`
