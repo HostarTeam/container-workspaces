@@ -71,9 +71,9 @@ export function getInfoFromHostname(): {
     port: number;
 } {
     const hostname: string = os.hostname();
-    const protocol = hostname.split('-')[0];
-    const address = hostname.split('-')[1];
-    const port = Number(hostname.split('-')[2]);
+    const protocol = hostname.split('491500')[0];
+    const address = hostname.split('491500')[1];
+    const port = Number(hostname.split('491500')[2]);
     return { protocol, address, port };
 }
 
@@ -109,9 +109,8 @@ export function printFatal(message): void {
 
 export function getSocketID(socket: WebSocket) {
     /* eslint-disable */
-    return `${(<any>socket)._socket.remoteAddress}:${
-        (<any>socket)._socket.remotePort
-    }`;
+    return `${(<any>socket)._socket.remoteAddress}:${(<any>socket)._socket.remotePort
+        }`;
     /* eslint-disable */
 }
 

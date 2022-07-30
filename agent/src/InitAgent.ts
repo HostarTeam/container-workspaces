@@ -20,7 +20,9 @@ export default class InitAgent {
 
         this.config = {
             apiServer: `${this.protocol}://${this.address}:${this.port}`,
-            socketServer: `ws://${this.address}:${this.port}`,
+            socketServer: `${this.protocol === 'https' ? 'wss' : 'ws'}://${
+                this.address
+            }:${this.port}`,
         };
         this.writeConfig();
         this.configureLogger();
@@ -126,13 +128,24 @@ export default class InitAgent {
     }
 
     private async initHostname(): Promise<void> {
-        const res = await fetch(
-            `${this.config.apiServer}/api/agent/inithostname`
-        );
-        const data: { status: 'ok' | 'forbidden'; hostname: string } =
-            await res.json();
+        try {
+            const res = await fetch(
+                `${this.config.apiServer}/api/agent/inithostname`
+            );
+            const data: { status: 'ok' | 'forbidden'; hostname: string } =
+                await res.json();
 
-        if (data.status === 'ok') changeSystemHostname(data.hostname);
-        else this.logger.error('Could not set hostname');
+            if (data.status === 'ok') changeSystemHostname(data.hostname);
+            else
+                this.logger.error(
+                    'Could not set hostname, got the following repsonse from deamon server:',
+                    data
+                );
+        } catch (err) {
+            this.logger.error(
+                'Deamon did not respond to inithostname, so could not set hostname, full error:',
+                err
+            );
+        }
     }
 }
