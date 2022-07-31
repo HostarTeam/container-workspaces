@@ -189,7 +189,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
                     status: 'error',
                     message: result.error,
                 });
-            return res.send({
+            return res.status(201).send({
                 status: 'ok',
                 message: 'backup created',
             });
