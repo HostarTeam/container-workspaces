@@ -813,7 +813,9 @@ export async function getContainers(this: ProxmoxConnection): Promise<LXC[]> {
         const containerData = this.getContainerInfo(ct.id);
         if (containerData) containersAsPromises.push(containerData);
     }
-    return await Promise.all(containersAsPromises);
+    return (await Promise.all(containersAsPromises)).filter(
+        (container) => !!container
+    );
 }
 
 /**
