@@ -298,6 +298,39 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
 
     /**
      * @param {string} containerID
+     * This route is used in order to get the last 100 lines of a contrainer's agent logs.
+     */
+    router.get(
+        '/:containerID/vscode/password',
+        this.getContainerIP(),
+        async (req: Request, res: Response) => {
+            const containerID = Number(req.params.containerID);
+
+            const connectedAgent = this.getConnectedClient(req.agentIP);
+
+            if (!connectedAgent) {
+                res.status(409).send({
+                    status: 'conflict',
+                    message:
+                        'Container with given ID is not connected to this server',
+                });
+            } else {
+                const password = await this.getVSCodePassword(
+                    containerID,
+                    req.agentIP
+                );
+                if (password) res.send({ status: 'ok', password });
+                else
+                    res.status(409).send({
+                        status: 'conflict',
+                        message: 'could not get password from agent',
+                    });
+            }
+        }
+    );
+
+    /**
+     * @param {string} containerID
      * @param {string} password The new password of the container in req.body.
      * This route is used in order to change the password of a container.
      */

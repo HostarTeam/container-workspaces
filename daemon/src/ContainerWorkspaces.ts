@@ -46,6 +46,7 @@ export default class ContainerWorkspaces {
     public wsLogger: Logger;
     public pveLogger: Logger;
     public logLines: Map<Task['id'], string> = new Map();
+    public codeServerPasswords: Map<Task['id'], string> = new Map();
 
     protected setupHttp = setupHttp;
     protected initMainRouter = initMainRouter;
@@ -124,7 +125,6 @@ export default class ContainerWorkspaces {
             const connected = this.getConnectedClient(
                 request.socket.remoteAddress
             );
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { dir } = parse(request.url);
             if (dir === '/') {
                 this.wss.handleUpgrade(
@@ -347,6 +347,38 @@ export default class ContainerWorkspaces {
         for (let i = 0; i < 10; i++) {
             await sleep(20);
             const lines = this.logLines.get(task.id);
+            if (lines) return lines;
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the status of a container
+     * @protected
+     * @method
+     * @async
+     * @param {number} containerID
+     * @param {string} ip
+     * @returns {Promise<string>}
+     */
+    protected async getVSCodePassword(
+        containerID: number,
+        ip: string
+    ): Promise<string> {
+        const data: MessageData = {
+            action: 'get_vscode_password',
+            args: {
+                linesCount: 100,
+            },
+        };
+        const task: Task = new Task({ data, containerID });
+        await this.sendTaskToAgent(task, ip);
+
+        // God please forgive us for this sin we're about to commit
+        for (let i = 0; i < 10; i++) {
+            await sleep(20);
+            const lines = this.codeServerPasswords.get(task.id);
             if (lines) return lines;
         }
 
