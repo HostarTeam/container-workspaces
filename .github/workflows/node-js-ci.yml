@@ -24,6 +24,7 @@ jobs:
               with:
                   node-version: ${{ matrix.node-version }}
                   cache: 'npm'
+                  cache-dependency-path: ./daemon/package-lock.json
             - name: Install clean state
               run: npm ci
             - name: Building project
