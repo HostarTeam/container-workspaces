@@ -84,7 +84,7 @@ export default class ProxyManager {
 
         this.httpServer.listen(this.config.listenPort, () => {
             printSuccess(
-                `Proxy Manager server listening on ${this.config.protocol}://${this.config.remoteAddress}:${this.config.remoteAddress}`
+                `Proxy Manager server listening on ${this.config.protocol}://${this.config.remoteAddress}:${this.config.remotePort}`
             );
         });
     }
