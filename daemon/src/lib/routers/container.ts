@@ -298,7 +298,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
 
     /**
      * @param {string} containerID
-     * This route is used in order to get the last 100 lines of a contrainer's agent logs.
+     * This route is used in order to get the password from openvscode-server.
      */
     router.get(
         '/:containerID/vscode/password',
