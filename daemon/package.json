@@ -23,7 +23,6 @@
     "homepage": "https://github.com/ubarilan/container-workspaces#readme",
     "dependencies": {
         "@hostarteam/mysqlclient": "^1.0.6",
-        "@types/http-proxy": "^1.17.8",
         "bcryptjs": "^2.4.3",
         "cors": "^2.8.5",
         "express": "^4.17.2",
@@ -37,6 +36,7 @@
         "@types/bcryptjs": "^2.4.2",
         "@types/cors": "^2.8.12",
         "@types/express": "^4.17.13",
+        "@types/http-proxy": "^1.17.9",
         "@types/node": "^17.0.7",
         "@types/node-fetch": "^2.5.12",
         "@types/ws": "^8.2.2",
