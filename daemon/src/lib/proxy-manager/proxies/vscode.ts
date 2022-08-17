@@ -28,13 +28,18 @@ export default class VSCodeProxy extends BaseProxy<ProxyOptions, string> {
                 }
             );
 
-            const text = await proxyRes.text();
+            let resp: unknown;
+            if (proxyRes.headers.get('content-type').startsWith('image/')) {
+                resp = await proxyRes.buffer();
+            } else {
+                resp = await proxyRes.text();
+            }
 
             res.set(Object.fromEntries(proxyRes.headers.entries()));
             res.removeHeader('Set-Cookie');
             res.status(proxyRes.status);
 
-            res.send(text);
+            res.send(resp);
         } catch (err: unknown) {
             if (err instanceof Error) {
                 res.status(500).send({

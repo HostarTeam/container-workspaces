@@ -34,11 +34,14 @@ export default async function proxyHandler(
 
     let proxyClient = this.containerProxyClient.get(proxyInfo.containerID);
     if (!proxyClient) {
-        proxyClient = new this.proxyClients[proxyInfo.service]({
-            host: targetAddress,
-            port: serviceToPort[proxyInfo.service],
-            containerID: proxyInfo.containerID,
-        });
+        proxyClient = new this.proxyClients[proxyInfo.service](
+            {
+                host: targetAddress,
+                port: serviceToPort[proxyInfo.service],
+                containerID: proxyInfo.containerID,
+            },
+            this
+        );
         if (proxyClient.authRequired) {
             await proxyClient.fetchAuth();
         }

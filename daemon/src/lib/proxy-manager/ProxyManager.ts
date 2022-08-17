@@ -23,8 +23,8 @@ export default class ProxyManager {
     protected allowedTokens: Map<string, number>;
     protected containerProxyClient: Map<number, BaseProxy>;
 
-    protected proxyClients: {
-        vscode: VSCodeProxy;
+    protected proxyClients = {
+        vscode: VSCodeProxy,
     };
 
     protected httpHandler = httpHandler;
@@ -77,6 +77,8 @@ export default class ProxyManager {
         this.webApp.disable('x-powered-by');
         this.webApp.use(express.json());
         this.webApp.use(express.urlencoded({ extended: true }));
+
+        this.webApp.use(this.httpHandler.bind(this));
 
         this.webApp.use('/pm/api', this.apiRouter.bind(this));
 

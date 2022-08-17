@@ -5,6 +5,12 @@ export function initializeApiRouter(this: ProxyManager) {
     const router: Router = Router();
     this.apiRouter = router;
 
+    router.all('*', (req, res, next) => {
+        if (req.hostname !== this.config.remoteAddress) {
+            return next('router');
+        }
+    });
+
     router.post('/addcontaineraccess', (req: Request, res: Response) => {
         const {
             token,

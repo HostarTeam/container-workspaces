@@ -10,4 +10,6 @@ export default function httpHandler(
     if (req.hostname === this.config.remoteAddress) {
         return next('router');
     }
+
+    this.proxyHandler(req, res);
 }
