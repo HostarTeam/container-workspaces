@@ -1,6 +1,6 @@
 import { AgentConfiguration } from './lib/typing/types';
 import { RawData, WebSocket } from 'ws';
-import { printSuccess } from './lib/utils';
+import { generatePassword, printSuccess } from './lib/utils';
 import log4js, { Logger } from 'log4js';
 import { handleMessage } from './ws/handleMessage';
 import { wsCommand } from './ws/wsCommand';
@@ -9,6 +9,8 @@ import passwd from 'passwd-linux';
 import { MessageDataResponse } from './lib/typing/MessageData';
 import WebShell from './WebShell/WebShell';
 import Ticket from './lib/typing/Ticket';
+import Service from './lib/services/baseService';
+import VSCode from './lib/services/vscode';
 
 export default class Agent {
     public ws: WebSocket;
@@ -19,11 +21,18 @@ export default class Agent {
     private webShell: WebShell;
     protected handleMessage: (message: RawData) => void = handleMessage;
     protected wsCommand: (commandData: Task) => void = wsCommand;
+    public serviceJournal: Map<string, string>;
+
+    private services: { [key: string]: Service } = {
+        vsCode: new VSCode(),
+    };
 
     constructor(public config: AgentConfiguration) {
         this.configureLogger();
         this.initWebSocket();
         this.startWebShell();
+        this.serviceJournal = new Map();
+        this.runServices();
     }
 
     private initWebSocket(isReconnection = false): void {
@@ -31,7 +40,8 @@ export default class Agent {
 
         this.ws.on('open', () => {
             printSuccess(
-                `${isReconnection ? 'Rec' : 'C'}onnected to ${this.config.socketServer
+                `${isReconnection ? 'Rec' : 'C'}onnected to ${
+                    this.config.socketServer
                 }`
             );
         });
@@ -51,7 +61,9 @@ export default class Agent {
             if (err.message.includes('connect ECONNREFUSED')) {
                 this.logger.error(err.message);
                 this.reconnectToWS();
-            } else if (err.message === 'unable to verify the first certificate') {
+            } else if (
+                err.message === 'unable to verify the first certificate'
+            ) {
                 this.logger.error(err.message);
                 this.reconnectToWS();
             }
@@ -108,5 +120,17 @@ export default class Agent {
                 else this.logger.error('Could not change password');
             }
         );
+    }
+
+    private runServices(): void {
+        // VSCode service
+        const vscodeToken = generatePassword(64);
+        this.serviceJournal.set('vscode_token', vscodeToken);
+        this.services.vsCode.setArgs({
+            token: vscodeToken,
+            port: 8443,
+            host: '0.0.0.0',
+        });
+        this.services.vsCode.start();
     }
 }

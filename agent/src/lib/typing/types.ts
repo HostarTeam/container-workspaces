@@ -18,3 +18,9 @@ export interface CommandErrorReport extends ErrorReport {
 }
 
 export type MessageRoutingHandler = MessageRouting[keyof MessageRouting];
+
+export interface VSCodeConfiguration {
+    token: string;
+    port: number;
+    host: string;
+}

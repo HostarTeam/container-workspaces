@@ -109,8 +109,9 @@ export function printFatal(message): void {
 
 export function getSocketID(socket: WebSocket) {
     /* eslint-disable */
-    return `${(<any>socket)._socket.remoteAddress}:${(<any>socket)._socket.remotePort
-        }`;
+    return `${(<any>socket)._socket.remoteAddress}:${
+        (<any>socket)._socket.remotePort
+    }`;
     /* eslint-disable */
 }
 
@@ -120,3 +121,5 @@ export function checkIfSocketClosed(socket: WebSocket): boolean {
         socket.readyState === WebSocket.CLOSING
     );
 }
+
+export const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
