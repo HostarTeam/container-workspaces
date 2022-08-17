@@ -39,6 +39,7 @@ export default class ContainerWorkspaces {
     public readonly remotePort: number;
     public readonly protocol: Configuration['protocol'];
     public readonly sslOptions: Configuration['sslOptions'];
+    public readonly proxyConfig: Configuration['proxy'];
 
     private log4js: Log4js;
     public mainLogger: Logger;
@@ -69,7 +70,7 @@ export default class ContainerWorkspaces {
     protected containerRouter: Router;
     protected configRouter: Router;
     protected webSockerRouter;
-    protected proxmoxClient: ProxmoxConnection;
+    public proxmoxClient: ProxmoxConnection;
     protected mySQLClient: MySQLClient;
 
     constructor({
@@ -355,14 +356,14 @@ export default class ContainerWorkspaces {
 
     /**
      * Get the status of a container
-     * @protected
+     * @public
      * @method
      * @async
      * @param {number} containerID
      * @param {string} ip
      * @returns {Promise<string>}
      */
-    protected async getVSCodePassword(
+    public async getVSCodePassword(
         containerID: number,
         ip: string
     ): Promise<string> {
@@ -387,12 +388,12 @@ export default class ContainerWorkspaces {
 
     /**
      * Get a client from the connected clients list
-     * @protected
+     * @public
      * @method
      * @param  {string} ip
      * @returns {WebSocket | null}
      */
-    protected getConnectedClient(ip: string): WebSocket | null {
+    public getConnectedClient(ip: string): WebSocket | null {
         const clientList: WebSocket[] = Array.from(this.wss.clients);
         const selectedClient: WebSocket = clientList.find(
             /*eslint-disable */
