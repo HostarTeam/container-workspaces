@@ -30,6 +30,7 @@ import CT from './lib/entities/CT';
 import Task from './lib/entities/Task';
 import { parse } from 'path';
 import { createProxyServer } from 'http-proxy';
+import ProxyManager from './lib/proxy-manager/ProxyManager';
 
 export default class ContainerWorkspaces {
     protected httpServer: HttpServer | HttpsServer;
@@ -72,6 +73,7 @@ export default class ContainerWorkspaces {
     protected webSockerRouter;
     public proxmoxClient: ProxmoxConnection;
     protected mySQLClient: MySQLClient;
+    protected proxyManager: ProxyManager;
 
     constructor({
         listenAddress,
@@ -82,6 +84,7 @@ export default class ContainerWorkspaces {
         sslOptions,
         database: databaseConf,
         pve: PVEConf,
+        proxy: proxyConf,
     }: Configuration) {
         this.listenAddress = listenAddress;
         this.listenPort = listenPort;
@@ -89,6 +92,8 @@ export default class ContainerWorkspaces {
         this.remotePort = remotePort;
         this.protocol = protocol;
         this.sslOptions = sslOptions;
+        this.proxyConfig = proxyConf;
+
         this.configureLoggers();
 
         this.setupHttp();
@@ -106,6 +111,8 @@ export default class ContainerWorkspaces {
             cw: this,
             verifyCertificate: false,
         });
+
+        this.proxyManager = new ProxyManager(this);
     }
 
     /**
