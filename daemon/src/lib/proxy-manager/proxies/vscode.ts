@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import fetch from 'node-fetch';
+import { delay } from '../../util/utils';
 import ProxyManager from '../ProxyManager';
 import BaseProxy, { ProxyOptions } from './BaseProxy';
 
@@ -28,20 +29,12 @@ export default class VSCodeProxy extends BaseProxy<ProxyOptions, string> {
                 }
             );
 
-            let resp: unknown;
-            if (proxyRes.headers.get('content-type').startsWith('image/')) {
-                resp = await proxyRes.buffer();
-            } else {
-                resp = await proxyRes.text();
-            }
-
             res.set(Object.fromEntries(proxyRes.headers.entries()));
             res.removeHeader('Set-Cookie');
             res.status(proxyRes.status);
-
-            res.send(resp);
+            proxyRes.body.pipe(res);
         } catch (err: unknown) {
-            if (err instanceof Error) {
+            if (err instanceof Error && !res.headersSent) {
                 res.status(500).send({
                     status: 'error',
                     message: `Error occurred while proxying request to VSCode server - ${err.message}`,
@@ -50,10 +43,17 @@ export default class VSCodeProxy extends BaseProxy<ProxyOptions, string> {
         }
     }
 
-    public async fetchAuth(): Promise<void> {
-        this.auth = await this.pm.cw.getVSCodePassword(
-            this.config.containerID,
-            this.config.host
-        );
+    public async fetchAuth(retry = 0, maxRetry = 5): Promise<void> {
+        try {
+            this.auth = await this.pm.cw.getVSCodePassword(
+                this.config.containerID,
+                this.config.host
+            );
+        } catch (err) {
+            if (retry < maxRetry) {
+                await delay(1000);
+                await this.fetchAuth(retry + 1, maxRetry);
+            }
+        }
     }
 }

@@ -258,3 +258,12 @@ export async function checkAuthToken(
 
     return compareSync(client_secret, result.client_secret);
 }
+
+/**
+ * Wait for a specified amount of time
+ * @param  {number} ms
+ * @returns {Promise<void>}
+ * @async
+ */
+export const delay = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));

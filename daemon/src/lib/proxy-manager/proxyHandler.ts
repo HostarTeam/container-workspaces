@@ -23,7 +23,7 @@ export default async function proxyHandler(
         });
     }
 
-    const targetConnected = await this.cw.getConnectedClient(targetAddress);
+    const targetConnected = this.cw.getConnectedClient(targetAddress);
 
     if (!targetConnected) {
         res.status(409).send({
