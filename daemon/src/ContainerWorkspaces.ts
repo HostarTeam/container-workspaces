@@ -174,7 +174,13 @@ export default class ContainerWorkspaces {
                     },
                     ws: true,
                 });
-                proxy.ws(request, socket, head);
+                try {
+                    proxy.ws(request, socket, head, {
+                        proxyTimeout: 5000,
+                    });
+                } catch (e) {
+                    this.wsLogger.error(`Got error while proxying: ${e}`);
+                }
             } else request.destroy();
         });
     }

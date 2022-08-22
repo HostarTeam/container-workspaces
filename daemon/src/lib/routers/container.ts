@@ -452,7 +452,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
             const ticketID = generateID();
             const ticket: Ticket = {
                 id: ticketID,
-                expires: Date.now() + 1000 * 60, // One minute
+                expires: Date.now() + 1000 * 60 * 60 * 4, // 4 Hours
             };
 
             try {
