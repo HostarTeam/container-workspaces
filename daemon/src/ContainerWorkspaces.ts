@@ -175,9 +175,15 @@ export default class ContainerWorkspaces {
                     ws: true,
                 });
                 try {
-                    proxy.ws(request, socket, head, {
-                        proxyTimeout: 5000,
-                    });
+                    proxy.ws(
+                        request,
+                        socket,
+                        head,
+                        {
+                            proxyTimeout: 5000,
+                        },
+                        () => null
+                    );
                 } catch (e) {
                     this.wsLogger.error(`Got error while proxying: ${e}`);
                 }
