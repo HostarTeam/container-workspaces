@@ -1,5 +1,5 @@
 import type { Configuration } from '../typing/types';
-import express, { Application, Router } from 'express';
+import express, { Application, Handler, Router } from 'express';
 import {
     Server as HttpServer,
     createServer as createHttpServer,
@@ -31,6 +31,7 @@ export default class ProxyManager {
     protected apiRouter: Router;
     protected allowedTokens: Map<string, number>;
     protected containerProxyClient: Map<number, BaseProxy>;
+    protected authMiddleware: () => Handler;
 
     protected proxyClients = {
         vscode: VSCodeProxy,
@@ -46,6 +47,7 @@ export default class ProxyManager {
 
     constructor(public cw: ContainerWorkspaces) {
         this.config = cw.proxyConfig;
+        this.authMiddleware = cw.authMiddleware;
         this.allowedTokens = new Map();
         this.containerProxyClient = new Map();
 
@@ -90,7 +92,11 @@ export default class ProxyManager {
 
         this.webApp.use(this.httpHandler.bind(this));
 
-        this.webApp.use('/pm/api', this.apiRouter.bind(this));
+        this.webApp.use(
+            '/pm/api',
+            this.authMiddleware(),
+            this.apiRouter.bind(this)
+        );
 
         this.httpServer.on('request', this.webApp);
         this.initWebSocketServer();

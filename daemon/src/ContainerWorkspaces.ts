@@ -61,7 +61,7 @@ export default class ContainerWorkspaces {
     protected checkContainerID = checkContainerID;
     protected sendTaskToAgent = sendTaskToAgent;
     protected httpLoggerMiddleware = httpLoggerMiddleware;
-    protected authMiddleware = authMiddleware;
+    public authMiddleware = authMiddleware;
     protected checkAuthToken = checkAuthToken;
 
     protected webApp: Application;

@@ -7,7 +7,6 @@ export default function httpHandler(
     res: Response,
     next: NextFunction
 ): void {
-    // TODO: Handle API auth
     if (req.hostname === this.config.remoteAddress) {
         return next('router');
     }
