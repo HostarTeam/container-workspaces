@@ -1,4 +1,6 @@
 import type { Request, Response } from 'express';
+import { IncomingMessage } from 'http';
+import { Duplex } from 'stream';
 import ProxyManager from '../ProxyManager';
 
 export interface ProxyOptions {
@@ -24,6 +26,17 @@ export default abstract class BaseProxy<
     }
 
     public fetchAuth(): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+
+    public handleHttpUpgrade(
+        request: IncomingMessage,
+        socket: Duplex,
+        head: Buffer
+    ): void {
+        request;
+        socket;
+        head;
         throw new Error('Method not implemented.');
     }
 }

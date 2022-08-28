@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
+import { IncomingMessage } from 'http';
+import { createProxy } from 'http-proxy';
 import fetch from 'node-fetch';
+import { Duplex } from 'stream';
 import { delay } from '../../util/utils';
 import ProxyManager from '../ProxyManager';
 import BaseProxy, { ProxyOptions } from './BaseProxy';
@@ -20,8 +23,8 @@ export default class VSCodeProxy extends BaseProxy<ProxyOptions, string> {
                         ...Object(req.headers),
                         accept: '*/*',
                         'upgrade-insecure-requests': '1',
-                        Cookie: `vscode-tkn=${this.auth}`,
-                        Host: `${req.agentIP}:${this.config.port}`,
+                        cookie: `vscode-tkn=${this.auth}`,
+                        host: `${req.agentIP}:${this.config.port}`,
                     },
                     method: req.method,
                     ...(Object.keys(req.body).length > 0 && { body: req.body }),
@@ -30,7 +33,6 @@ export default class VSCodeProxy extends BaseProxy<ProxyOptions, string> {
             );
 
             res.set(Object.fromEntries(proxyRes.headers.entries()));
-            res.removeHeader('Set-Cookie');
             res.status(proxyRes.status);
             proxyRes.body.pipe(res);
         } catch (err: unknown) {
@@ -55,5 +57,20 @@ export default class VSCodeProxy extends BaseProxy<ProxyOptions, string> {
                 await this.fetchAuth(retry + 1, maxRetry);
             }
         }
+    }
+
+    public handleHttpUpgrade(
+        request: IncomingMessage,
+        socket: Duplex,
+        head: Buffer
+    ): void {
+        const proxy = createProxy({
+            target: `ws://${this.config.host}:${this.config.port}${request.url}`,
+            headers: {
+                Cookie: `vscode-tkn=${this.auth}`,
+            },
+        });
+
+        proxy.ws(request, socket, head, null, () => null);
     }
 }

@@ -1,6 +1,10 @@
 import type { Configuration } from '../typing/types';
 import express, { Application, Router } from 'express';
-import { Server as HttpServer, createServer as createHttpServer } from 'http';
+import {
+    Server as HttpServer,
+    createServer as createHttpServer,
+    IncomingMessage,
+} from 'http';
 import {
     Server as HttpsServer,
     createServer as createHttpsServer,
@@ -10,13 +14,18 @@ import { printError, printSuccess } from '../util/utils';
 import { initializeApiRouter } from './routers/apiRouter';
 import proxyHandler from './proxyHandler';
 import httpHandler from './httpHandler';
-import validateProxy from './common/validateProxyHost';
+import validateProxy, { validateWSProxy } from './common/validateProxyHost';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import BaseProxy from './proxies/BaseProxy';
 import VSCodeProxy from './proxies/vscode';
+import { WebSocketServer } from 'ws';
+import { getProxyInfo } from './common/utils';
+import serviceToPort from './common/serviceToPort';
+import { Duplex } from 'stream';
 
 export default class ProxyManager {
     private httpServer: HttpServer | HttpsServer;
+    private wss: WebSocketServer;
     protected readonly config: Configuration['proxy'];
     protected webApp: Application;
     protected apiRouter: Router;
@@ -31,6 +40,7 @@ export default class ProxyManager {
     protected proxyHandler = proxyHandler;
 
     protected validateProxy = validateProxy;
+    protected validateWSProxy = validateWSProxy;
 
     private initializeApiRouter = initializeApiRouter;
 
@@ -83,6 +93,7 @@ export default class ProxyManager {
         this.webApp.use('/pm/api', this.apiRouter.bind(this));
 
         this.httpServer.on('request', this.webApp);
+        this.initWebSocketServer();
 
         this.httpServer.listen(this.config.listenPort, () => {
             printSuccess(
@@ -93,6 +104,59 @@ export default class ProxyManager {
 
     private initRouters(): void {
         this.initializeApiRouter();
+    }
+
+    private initWebSocketServer(): void {
+        this.httpServer.on(
+            'upgrade',
+            async (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                if ((socket as any).servername === this.config.remoteAddress)
+                    return socket.destroy();
+
+                const proxyInfo = getProxyInfo(
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (request.socket as any).servername
+                );
+
+                const targetAddress =
+                    await this.cw.proxmoxClient.getContainerIP(
+                        proxyInfo.containerID
+                    );
+
+                if (!targetAddress) {
+                    return socket.destroy();
+                }
+
+                if (!this.validateWSProxy(request, socket))
+                    return socket.destroy();
+
+                let proxyClient = this.containerProxyClient.get(
+                    proxyInfo.containerID
+                );
+                if (!proxyClient) {
+                    proxyClient = new this.proxyClients[proxyInfo.service](
+                        {
+                            host: targetAddress,
+                            port: serviceToPort[proxyInfo.service],
+                            containerID: proxyInfo.containerID,
+                        },
+                        this
+                    );
+
+                    if (proxyClient.authRequired) {
+                        await proxyClient.fetchAuth();
+                    }
+
+                    this.containerProxyClient.set(
+                        proxyInfo.containerID,
+                        proxyClient
+                    );
+                }
+
+                proxyClient.handleHttpUpgrade(request, socket, head);
+            }
+        );
     }
 
     /**
