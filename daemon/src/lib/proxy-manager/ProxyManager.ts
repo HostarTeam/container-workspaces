@@ -1,4 +1,4 @@
-import type { Configuration, ProxyConfiguration } from '../typing/types';
+import type { Configuration } from '../typing/types';
 import express, { Application, Handler } from 'express';
 import {
     Server as HttpServer,
