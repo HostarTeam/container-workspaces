@@ -10,3 +10,15 @@ export function getProxyInfo(hostname: string): ProxyInfo | null {
 
     return { service, containerID };
 }
+
+export function parseCookieString(cookie: string): unknown {
+    return cookie
+        .split(';')
+        .map((v) => v.split('='))
+        .reduce((acc, v) => {
+            acc[decodeURIComponent(v[0].trim())] = decodeURIComponent(
+                v[1].trim()
+            );
+            return acc;
+        }, {});
+}

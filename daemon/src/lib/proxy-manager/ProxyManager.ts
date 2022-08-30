@@ -1,5 +1,5 @@
 import type { Configuration } from '../typing/types';
-import express, { Application, Handler } from 'express';
+import express, { Application, Handler, Router } from 'express';
 import {
     Server as HttpServer,
     createServer as createHttpServer,
@@ -18,19 +18,24 @@ import ContainerWorkspaces from '../../ContainerWorkspaces';
 import BaseProxy from './proxies/BaseProxy';
 import VSCodeProxy from './proxies/vscode';
 import { WebSocketServer } from 'ws';
-import { getProxyInfo } from './common/utils';
+import { getProxyInfo, parseCookieString } from './common/utils';
 import serviceToPort from './common/serviceToPort';
 import { Duplex } from 'stream';
 import { ProxyInfo } from './common/types';
+import { initProxyRouter } from './routers/proxy';
+import { initServiceRedirectRouter } from './routers/serviceRedirect';
+import cookieParser from 'cookie-parser';
 
 export default class ProxyManager {
     private httpServer: HttpServer | HttpsServer;
     private wss: WebSocketServer;
     protected readonly config: Configuration['proxy'];
     protected webApp: Application;
-    private accessTokens: Map<string, ProxyInfo>;
+    protected accessTokens: Map<string, ProxyInfo>;
     protected containerProxyClient: Map<number, BaseProxy>;
     protected authMiddleware: () => Handler;
+    protected proxyRouter: Router;
+    protected serviceRedirectRouter: Router;
 
     protected proxyClients = {
         vscode: VSCodeProxy,
@@ -38,6 +43,9 @@ export default class ProxyManager {
 
     protected httpHandler = httpHandler;
     protected proxyHandler = proxyHandler;
+
+    protected initProxyRouter = initProxyRouter;
+    protected initServiceRedirectRouter = initServiceRedirectRouter;
 
     protected validateProxy = validateProxy;
     protected validateWSProxy = validateWSProxy;
@@ -86,7 +94,10 @@ export default class ProxyManager {
         this.webApp.disable('x-powered-by');
         this.webApp.use(express.json());
         this.webApp.use(express.urlencoded({ extended: true }));
+        this.webApp.use(cookieParser());
 
+        this.webApp.use('/proxy', this.proxyRouter);
+        this.webApp.use(this.serviceRedirectRouter);
         this.webApp.use(this.httpHandler.bind(this));
 
         this.httpServer.on('request', this.webApp);
@@ -100,7 +111,8 @@ export default class ProxyManager {
     }
 
     private initRouters(): void {
-        return;
+        this.initProxyRouter();
+        this.initServiceRedirectRouter();
     }
 
     private initWebSocketServer(): void {
@@ -113,7 +125,7 @@ export default class ProxyManager {
 
                 const proxyInfo = getProxyInfo(
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    (request.socket as any).servername
+                    (socket as any).servername
                 );
 
                 const targetAddress =
@@ -126,6 +138,26 @@ export default class ProxyManager {
                 }
 
                 if (!this.validateWSProxy(request, socket))
+                    return socket.destroy();
+
+                const cookies =
+                    request.headers['cookie'] &&
+                    parseCookieString(request.headers['cookie']);
+
+                if (!cookies) return socket.destroy();
+
+                const token = cookies['pm-token'];
+
+                if (!token) return socket.destroy();
+
+                if (!this.accessTokens.has(token)) return socket.destroy();
+
+                const { service, containerID } = this.accessTokens.get(token);
+
+                if (
+                    service != proxyInfo.service ||
+                    containerID != proxyInfo.containerID
+                )
                     return socket.destroy();
 
                 let proxyClient = this.containerProxyClient.get(

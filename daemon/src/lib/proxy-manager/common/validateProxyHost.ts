@@ -41,12 +41,12 @@ export function validateWSProxy(
     req: IncomingMessage,
     socket: Duplex
 ) {
-    if (req.headers.host === this.config.remoteAddress) {
+    if ((socket as any).servername === this.config.remoteAddress) {
         socket.destroy();
         return false;
     }
 
-    const proxyInfo = getProxyInfo(req.headers.host);
+    const proxyInfo = getProxyInfo((socket as any).servername);
     if (!proxyInfo) {
         socket.destroy();
         return false;
