@@ -20,8 +20,8 @@ export function initServiceRedirectRouter(this: ProxyManager): void {
 
         const { service, containerID } = getProxyInfo(req.hostname);
         if (
-            service != proxyInfo.service ||
-            containerID != proxyInfo.containerID
+            service !== proxyInfo.service ||
+            containerID !== proxyInfo.containerID
         )
             return res.send(401).send('invalid token');
 
@@ -45,8 +45,8 @@ export function initServiceRedirectRouter(this: ProxyManager): void {
 
         const { service, containerID } = getProxyInfo(req.hostname);
         if (
-            service != proxyInfo.service ||
-            containerID != proxyInfo.containerID
+            service !== proxyInfo.service ||
+            containerID !== proxyInfo.containerID
         )
             return res.status(401).send('unauthorized');
 

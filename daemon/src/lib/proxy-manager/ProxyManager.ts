@@ -155,8 +155,8 @@ export default class ProxyManager {
                 const { service, containerID } = this.accessTokens.get(token);
 
                 if (
-                    service != proxyInfo.service ||
-                    containerID != proxyInfo.containerID
+                    service !== proxyInfo.service ||
+                    containerID !== proxyInfo.containerID
                 )
                     return socket.destroy();
 
