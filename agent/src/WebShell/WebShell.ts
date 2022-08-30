@@ -50,7 +50,7 @@ export default class WebShell {
         socket: WebSocket,
         request: IncomingMessage
     ): void {
-        const params = new URLSearchParams(request.url);
+        const params = new URL(`http://example.com${request.url}`).searchParams;
         if (!params) return socket.close(1011, 'Invalid params');
         const ticketID: string = params.get('ticket');
         if (!ticketID) return socket.close(1011, 'No ticket');

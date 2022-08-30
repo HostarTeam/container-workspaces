@@ -6,9 +6,6 @@ import { Task } from '../lib/typing/Task';
 import { execAsync, getLastLines } from '../lib/utils';
 import { ActualExecException, ExecReportError } from '../lib/typing/errors';
 import Ticket from '../lib/typing/Ticket';
-import { readFileSync } from 'fs';
-import { parse } from 'yaml';
-import { homedir } from 'os';
 
 export default class MessageRouting {
     [key: string]: (agent: Agent, task: Task) => Promise<void>;
@@ -131,50 +128,15 @@ export default class MessageRouting {
         agent: Agent,
         task: Task
     ): Promise<void> {
-        try {
-            const codeServerConfigPath =
-                '~/.config/code-server/config.yaml'.replace('~', homedir);
-            const codeServerConfigContent = readFileSync(
-                codeServerConfigPath,
-                'utf8'
-            );
-            const codeServerConfig: {
-                'bind-addr': string;
-                auth: string;
-                password: string;
-                cert: false;
-            } = parse(codeServerConfigContent);
+        const clientCommand: MessageDataResponse = new MessageDataResponse({
+            taskid: task.id,
+            action: 'get_vscode_password',
+            args: {
+                status: 'success',
+                password: agent.serviceJournal.get('vscode_token'),
+            },
+        });
 
-            if (!codeServerConfig.password) {
-                throw new Error('No password found in config');
-            }
-
-            const clientCommand: MessageDataResponse = new MessageDataResponse({
-                taskid: task.id,
-                action: 'get_vscode_password',
-                args: {
-                    status: 'success',
-                    password: codeServerConfig.password,
-                },
-            });
-
-            agent.sendData(clientCommand);
-        } catch (err: unknown) {
-            if (err instanceof Error) {
-                const clientCommand = new MessageDataResponse({
-                    taskid: task.id,
-                    action: 'get_vscode_password',
-                    args: {
-                        status: 'error',
-                        errorReport: {
-                            message: err.message,
-                            stack: err.stack,
-                        },
-                    },
-                });
-
-                agent.sendData(clientCommand);
-            }
-        }
+        agent.sendData(clientCommand);
     }
 }

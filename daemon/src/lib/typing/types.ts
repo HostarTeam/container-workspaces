@@ -15,6 +15,7 @@ export interface Configuration {
         key: string;
     };
     protocol: 'http' | 'https';
+    proxy: ProxyConfiguration;
     database: {
         host: string;
         port: number;
@@ -27,6 +28,19 @@ export interface Configuration {
         protocol: Configuration['protocol'];
         username: string;
         password: string;
+    };
+}
+
+export interface ProxyConfiguration {
+    listenAddress: string;
+    listenPort: number;
+    remoteAddress: string;
+    remotePort: number;
+    wildcardBaseAddress: string;
+    protocol: 'http' | 'https';
+    sslOptions?: {
+        cert: string;
+        key: string;
     };
 }
 

@@ -7,7 +7,7 @@
         "dev": "nodemon src/app.ts",
         "start": "node .",
         "build": "tsc -p .",
-        "lint": "eslint . --ext .ts",
+        "lint": "eslint . --ext .ts --max-warnings=0",
         "compile": "npm run build && pkg . --output build/usr/bin/cw-agent",
         "build-deb": "npm run compile && dpkg --build build/ cw-agent.deb"
     },
@@ -40,6 +40,8 @@
         "@typescript-eslint/eslint-plugin": "^5.11.0",
         "@typescript-eslint/parser": "^5.11.0",
         "eslint": "^8.9.0",
+        "nodemon": "^2.0.19",
+        "ts-node": "^10.9.1",
         "typescript": "4.5"
     },
     "bin": "./dist/app.js"

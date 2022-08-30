@@ -835,7 +835,9 @@ export async function getContainerStatuses(
         const containerData = this.getContainerStatus(ct.id);
         if (containerData) containerStatusesAsPromises.push(containerData);
     }
-    return await Promise.all(containerStatusesAsPromises);
+    return (await Promise.all(containerStatusesAsPromises)).filter(
+        (container) => !!container
+    );
 }
 
 export async function getStorages(

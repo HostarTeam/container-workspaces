@@ -1,35 +1,37 @@
-import { Application, Router, Request, Response, Handler } from 'express';
+import { ConnectionOptions, MySQLClient } from '@hostarteam/mysqlclient';
+import { Application, Handler, Request, Response, Router } from 'express';
 import { Server as HttpServer } from 'http';
+import { createProxyServer } from 'http-proxy';
 import { Server as HttpsServer } from 'https';
 import { Log4js, Logger } from 'log4js';
-import { initMainRouter } from './lib/routers/main';
+import { parse } from 'path';
+import { WebSocket, WebSocketServer } from 'ws';
+import setupHttp from './http';
+import CT from './lib/entities/CT';
+import Task from './lib/entities/Task';
+import authMiddleware from './lib/middleware/auth';
+import httpLoggerMiddleware from './lib/middleware/logging';
+import ProxmoxConnection from './lib/proxmox/ProxmoxConnection';
+import ProxyManager from './lib/proxy-manager/ProxyManager';
 import { initAgentRouter } from './lib/routers/agent';
+import { initConfigRouter } from './lib/routers/config';
 import { initContainerRouter } from './lib/routers/container';
+import { initMainRouter } from './lib/routers/main';
+import { initPMRouter } from './lib/routers/pm';
+import { MessageData } from './lib/typing/MessageData';
+import { CTHardwareOptions } from './lib/typing/options';
+import { Config, Configuration, status, Ticket } from './lib/typing/types';
 import {
     checkAuthToken,
-    checkIP,
     checkContainerID,
+    checkIP,
     createLoggers,
     printSuccess,
     sleep,
 } from './lib/util/utils';
-import ProxmoxConnection from './lib/proxmox/ProxmoxConnection';
-import { WebSocket, WebSocketServer } from 'ws';
-import { handleMessage } from './lib/ws/wsMessageHandler';
-import { wsCommand } from './lib/ws/routing/wsCommand';
 import { ClientNotFoundError, sendTaskToAgent } from './lib/ws/commandAgent';
-import { Config, status, Configuration, Ticket } from './lib/typing/types';
-import { MessageData } from './lib/typing/MessageData';
-import { initConfigRouter } from './lib/routers/config';
-import { CTHardwareOptions } from './lib/typing/options';
-import setupHttp from './http';
-import httpLoggerMiddleware from './lib/middleware/logging';
-import authMiddleware from './lib/middleware/auth';
-import { MySQLClient, ConnectionOptions } from '@hostarteam/mysqlclient';
-import CT from './lib/entities/CT';
-import Task from './lib/entities/Task';
-import { parse } from 'path';
-import { createProxyServer } from 'http-proxy';
+import { wsCommand } from './lib/ws/routing/wsCommand';
+import { handleMessage } from './lib/ws/wsMessageHandler';
 
 export default class ContainerWorkspaces {
     protected httpServer: HttpServer | HttpsServer;
@@ -39,6 +41,7 @@ export default class ContainerWorkspaces {
     public readonly remotePort: number;
     public readonly protocol: Configuration['protocol'];
     public readonly sslOptions: Configuration['sslOptions'];
+    public readonly proxyConfig: Configuration['proxy'];
 
     private log4js: Log4js;
     public mainLogger: Logger;
@@ -53,13 +56,14 @@ export default class ContainerWorkspaces {
     protected initAgentRouter = initAgentRouter;
     protected initConfigRouter = initConfigRouter;
     protected initContainerRouter = initContainerRouter;
+    protected initPMRouter = initPMRouter;
     protected handleMessage = handleMessage;
     protected wsCommand = wsCommand;
     protected checkIP = checkIP;
     protected checkContainerID = checkContainerID;
     protected sendTaskToAgent = sendTaskToAgent;
     protected httpLoggerMiddleware = httpLoggerMiddleware;
-    protected authMiddleware = authMiddleware;
+    public authMiddleware = authMiddleware;
     protected checkAuthToken = checkAuthToken;
 
     protected webApp: Application;
@@ -68,9 +72,11 @@ export default class ContainerWorkspaces {
     protected agentRouter: Router;
     protected containerRouter: Router;
     protected configRouter: Router;
+    protected pmRouter: Router;
     protected webSockerRouter;
-    protected proxmoxClient: ProxmoxConnection;
+    public proxmoxClient: ProxmoxConnection;
     protected mySQLClient: MySQLClient;
+    protected proxyManager: ProxyManager;
 
     constructor({
         listenAddress,
@@ -81,6 +87,7 @@ export default class ContainerWorkspaces {
         sslOptions,
         database: databaseConf,
         pve: PVEConf,
+        proxy: proxyConf,
     }: Configuration) {
         this.listenAddress = listenAddress;
         this.listenPort = listenPort;
@@ -88,7 +95,11 @@ export default class ContainerWorkspaces {
         this.remotePort = remotePort;
         this.protocol = protocol;
         this.sslOptions = sslOptions;
+        this.proxyConfig = proxyConf;
+
         this.configureLoggers();
+
+        this.proxyManager = new ProxyManager(this);
 
         this.setupHttp();
 
@@ -166,7 +177,19 @@ export default class ContainerWorkspaces {
                     },
                     ws: true,
                 });
-                proxy.ws(request, socket, head);
+                try {
+                    proxy.ws(
+                        request,
+                        socket,
+                        head,
+                        {
+                            proxyTimeout: 5000,
+                        },
+                        () => null
+                    );
+                } catch (e) {
+                    this.wsLogger.error(`Got error while proxying: ${e}`);
+                }
             } else request.destroy();
         });
     }
@@ -199,6 +222,7 @@ export default class ContainerWorkspaces {
         this.initContainerRouter();
         this.initMainRouter();
         this.initAgentRouter();
+        this.initPMRouter();
     }
 
     /**
@@ -355,14 +379,14 @@ export default class ContainerWorkspaces {
 
     /**
      * Get the status of a container
-     * @protected
+     * @public
      * @method
      * @async
      * @param {number} containerID
      * @param {string} ip
      * @returns {Promise<string>}
      */
-    protected async getVSCodePassword(
+    public async getVSCodePassword(
         containerID: number,
         ip: string
     ): Promise<string> {
@@ -387,12 +411,12 @@ export default class ContainerWorkspaces {
 
     /**
      * Get a client from the connected clients list
-     * @protected
+     * @public
      * @method
      * @param  {string} ip
      * @returns {WebSocket | null}
      */
-    protected getConnectedClient(ip: string): WebSocket | null {
+    public getConnectedClient(ip: string): WebSocket | null {
         const clientList: WebSocket[] = Array.from(this.wss.clients);
         const selectedClient: WebSocket = clientList.find(
             /*eslint-disable */
