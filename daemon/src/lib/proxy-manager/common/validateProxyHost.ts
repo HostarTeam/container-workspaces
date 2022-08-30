@@ -3,7 +3,6 @@ import ProxyManager from '../ProxyManager';
 import { getProxyInfo } from './utils';
 import serviceToPort from './serviceToPort';
 import { IncomingMessage } from 'http';
-import WebSocket from 'ws';
 import { Duplex } from 'stream';
 
 export default function validateProxy(

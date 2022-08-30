@@ -1,5 +1,5 @@
-import type { Configuration } from '../typing/types';
-import express, { Application, Handler, Router } from 'express';
+import type { Configuration, ProxyConfiguration } from '../typing/types';
+import express, { Application, Handler } from 'express';
 import {
     Server as HttpServer,
     createServer as createHttpServer,
@@ -11,7 +11,6 @@ import {
 } from 'https';
 import { existsSync, readFileSync } from 'fs';
 import { printError, printSuccess } from '../util/utils';
-import { initializeApiRouter } from './routers/apiRouter';
 import proxyHandler from './proxyHandler';
 import httpHandler from './httpHandler';
 import validateProxy, { validateWSProxy } from './common/validateProxyHost';
@@ -22,14 +21,14 @@ import { WebSocketServer } from 'ws';
 import { getProxyInfo } from './common/utils';
 import serviceToPort from './common/serviceToPort';
 import { Duplex } from 'stream';
+import { ProxyInfo } from './common/types';
 
 export default class ProxyManager {
     private httpServer: HttpServer | HttpsServer;
     private wss: WebSocketServer;
     protected readonly config: Configuration['proxy'];
     protected webApp: Application;
-    protected apiRouter: Router;
-    protected allowedTokens: Map<string, number>;
+    private accessTokens: Map<string, ProxyInfo>;
     protected containerProxyClient: Map<number, BaseProxy>;
     protected authMiddleware: () => Handler;
 
@@ -43,12 +42,10 @@ export default class ProxyManager {
     protected validateProxy = validateProxy;
     protected validateWSProxy = validateWSProxy;
 
-    private initializeApiRouter = initializeApiRouter;
-
     constructor(public cw: ContainerWorkspaces) {
         this.config = cw.proxyConfig;
         this.authMiddleware = cw.authMiddleware;
-        this.allowedTokens = new Map();
+        this.accessTokens = new Map();
         this.containerProxyClient = new Map();
 
         this.startWebServer();
@@ -92,12 +89,6 @@ export default class ProxyManager {
 
         this.webApp.use(this.httpHandler.bind(this));
 
-        this.webApp.use(
-            '/pm/api',
-            this.authMiddleware(),
-            this.apiRouter.bind(this)
-        );
-
         this.httpServer.on('request', this.webApp);
         this.initWebSocketServer();
 
@@ -109,7 +100,7 @@ export default class ProxyManager {
     }
 
     private initRouters(): void {
-        this.initializeApiRouter();
+        return;
     }
 
     private initWebSocketServer(): void {
@@ -185,13 +176,11 @@ export default class ProxyManager {
         throw new Error('Method not implemented.');
     }
 
-    protected addContainerAccess(containerID: number, token: string): void {
-        this.allowedTokens.set(token, containerID);
+    public addContainerAccess(proxyInfo: ProxyInfo, token: string): void {
+        this.accessTokens.set(token, proxyInfo);
     }
 
-    protected removeContainerAccess(token: string): void {
-        if (this.allowedTokens.has(token)) {
-            this.allowedTokens.delete(token);
-        }
+    public removeContainerAccess(token: string): void {
+        this.accessTokens.delete(token);
     }
 }

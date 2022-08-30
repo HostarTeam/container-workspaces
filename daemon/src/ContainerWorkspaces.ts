@@ -1,36 +1,37 @@
-import { Application, Router, Request, Response, Handler } from 'express';
+import { ConnectionOptions, MySQLClient } from '@hostarteam/mysqlclient';
+import { Application, Handler, Request, Response, Router } from 'express';
 import { Server as HttpServer } from 'http';
+import { createProxyServer } from 'http-proxy';
 import { Server as HttpsServer } from 'https';
 import { Log4js, Logger } from 'log4js';
-import { initMainRouter } from './lib/routers/main';
+import { parse } from 'path';
+import { WebSocket, WebSocketServer } from 'ws';
+import setupHttp from './http';
+import CT from './lib/entities/CT';
+import Task from './lib/entities/Task';
+import authMiddleware from './lib/middleware/auth';
+import httpLoggerMiddleware from './lib/middleware/logging';
+import ProxmoxConnection from './lib/proxmox/ProxmoxConnection';
+import ProxyManager from './lib/proxy-manager/ProxyManager';
 import { initAgentRouter } from './lib/routers/agent';
+import { initConfigRouter } from './lib/routers/config';
 import { initContainerRouter } from './lib/routers/container';
+import { initMainRouter } from './lib/routers/main';
+import { initPMRouter } from './lib/routers/pm';
+import { MessageData } from './lib/typing/MessageData';
+import { CTHardwareOptions } from './lib/typing/options';
+import { Config, Configuration, status, Ticket } from './lib/typing/types';
 import {
     checkAuthToken,
-    checkIP,
     checkContainerID,
+    checkIP,
     createLoggers,
     printSuccess,
     sleep,
 } from './lib/util/utils';
-import ProxmoxConnection from './lib/proxmox/ProxmoxConnection';
-import { WebSocket, WebSocketServer } from 'ws';
-import { handleMessage } from './lib/ws/wsMessageHandler';
-import { wsCommand } from './lib/ws/routing/wsCommand';
 import { ClientNotFoundError, sendTaskToAgent } from './lib/ws/commandAgent';
-import { Config, status, Configuration, Ticket } from './lib/typing/types';
-import { MessageData } from './lib/typing/MessageData';
-import { initConfigRouter } from './lib/routers/config';
-import { CTHardwareOptions } from './lib/typing/options';
-import setupHttp from './http';
-import httpLoggerMiddleware from './lib/middleware/logging';
-import authMiddleware from './lib/middleware/auth';
-import { MySQLClient, ConnectionOptions } from '@hostarteam/mysqlclient';
-import CT from './lib/entities/CT';
-import Task from './lib/entities/Task';
-import { parse } from 'path';
-import { createProxyServer } from 'http-proxy';
-import ProxyManager from './lib/proxy-manager/ProxyManager';
+import { wsCommand } from './lib/ws/routing/wsCommand';
+import { handleMessage } from './lib/ws/wsMessageHandler';
 
 export default class ContainerWorkspaces {
     protected httpServer: HttpServer | HttpsServer;
@@ -55,6 +56,7 @@ export default class ContainerWorkspaces {
     protected initAgentRouter = initAgentRouter;
     protected initConfigRouter = initConfigRouter;
     protected initContainerRouter = initContainerRouter;
+    protected initPMRouter = initPMRouter;
     protected handleMessage = handleMessage;
     protected wsCommand = wsCommand;
     protected checkIP = checkIP;
@@ -70,6 +72,7 @@ export default class ContainerWorkspaces {
     protected agentRouter: Router;
     protected containerRouter: Router;
     protected configRouter: Router;
+    protected pmRouter: Router;
     protected webSockerRouter;
     public proxmoxClient: ProxmoxConnection;
     protected mySQLClient: MySQLClient;
@@ -96,6 +99,8 @@ export default class ContainerWorkspaces {
 
         this.configureLoggers();
 
+        this.proxyManager = new ProxyManager(this);
+
         this.setupHttp();
 
         this.connectDatabase(databaseConf);
@@ -111,8 +116,6 @@ export default class ContainerWorkspaces {
             cw: this,
             verifyCertificate: false,
         });
-
-        this.proxyManager = new ProxyManager(this);
     }
 
     /**
@@ -219,6 +222,7 @@ export default class ContainerWorkspaces {
         this.initContainerRouter();
         this.initMainRouter();
         this.initAgentRouter();
+        this.initPMRouter();
     }
 
     /**

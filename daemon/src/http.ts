@@ -50,6 +50,7 @@ export default function setupHttp(this: ContainerWorkspaces): void {
         this.containerRouter
     );
     this.webApp.use('/api/config', this.authMiddleware(), this.configRouter);
+    this.webApp.use('/api/pm', this.authMiddleware(), this.pmRouter);
     this.webApp.use('/api', this.authMiddleware(), this.mainRouter);
 
     this.httpServer.on('request', this.webApp);

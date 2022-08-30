@@ -1,4 +1,6 @@
+import serviceToPort from './serviceToPort';
+
 export interface ProxyInfo {
-    service: string;
+    service: keyof typeof serviceToPort;
     containerID: number;
 }
