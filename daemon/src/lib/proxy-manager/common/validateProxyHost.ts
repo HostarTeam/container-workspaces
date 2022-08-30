@@ -41,11 +41,13 @@ export function validateWSProxy(
     req: IncomingMessage,
     socket: Duplex
 ) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((socket as any).servername === this.config.remoteAddress) {
         socket.destroy();
         return false;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const proxyInfo = getProxyInfo((socket as any).servername);
     if (!proxyInfo) {
         socket.destroy();
