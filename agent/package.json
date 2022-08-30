@@ -7,7 +7,7 @@
         "dev": "nodemon src/app.ts",
         "start": "node .",
         "build": "tsc -p .",
-        "lint": "eslint . --ext .ts",
+        "lint": "eslint . --ext .ts --max-warnings=0",
         "compile": "npm run build && pkg . --output build/usr/bin/cw-agent",
         "build-deb": "npm run compile && dpkg --build build/ cw-agent.deb"
     },
