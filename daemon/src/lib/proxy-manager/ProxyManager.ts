@@ -17,7 +17,6 @@ import validateProxy, { validateWSProxy } from './common/validateProxyHost';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import BaseProxy from './proxies/BaseProxy';
 import VSCodeProxy from './proxies/vscode';
-import { WebSocketServer } from 'ws';
 import { getProxyInfo, parseCookieString } from './common/utils';
 import serviceToPort from './common/serviceToPort';
 import { Duplex } from 'stream';
@@ -28,7 +27,6 @@ import cookieParser from 'cookie-parser';
 
 export default class ProxyManager {
     private httpServer: HttpServer | HttpsServer;
-    private wss: WebSocketServer;
     protected readonly config: Configuration['proxy'];
     protected webApp: Application;
     protected accessTokens: Map<string, ProxyInfo>;
