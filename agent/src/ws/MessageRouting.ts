@@ -164,7 +164,6 @@ export default class MessageRouting {
                         taskid: task.id,
                         action: 'shell_exec_sync',
                         args: {
-                            status: 'running',
                             output: String(data),
                             outputType: 'stdout',
                         },
@@ -179,7 +178,6 @@ export default class MessageRouting {
                         taskid: task.id,
                         action: 'shell_exec_sync',
                         args: {
-                            status: 'running',
                             output: String(data),
                             outputType: 'stderr',
                         },
