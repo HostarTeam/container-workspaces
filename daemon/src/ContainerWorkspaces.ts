@@ -35,13 +35,6 @@ import { handleMessage } from './lib/ws/wsMessageHandler';
 
 export default class ContainerWorkspaces {
     protected httpServer: HttpServer | HttpsServer;
-    public readonly listenAddress: string;
-    public readonly listenPort: number;
-    public readonly remoteAddress: string;
-    public readonly remotePort: number;
-    public readonly protocol: Configuration['protocol'];
-    public readonly sslOptions: Configuration['sslOptions'];
-    public readonly proxyConfig: Configuration['proxy'];
 
     private log4js: Log4js;
     public mainLogger: Logger;
@@ -67,49 +60,31 @@ export default class ContainerWorkspaces {
     protected checkAuthToken = checkAuthToken;
 
     protected webApp: Application;
+    protected wssHttpServer: HttpServer | HttpsServer;
     protected wss: WebSocketServer;
     protected mainRouter: Router;
     protected agentRouter: Router;
     protected containerRouter: Router;
     protected configRouter: Router;
     protected pmRouter: Router;
-    protected webSockerRouter;
     public proxmoxClient: ProxmoxConnection;
     protected mySQLClient: MySQLClient;
     protected proxyManager: ProxyManager;
 
-    constructor({
-        listenAddress,
-        listenPort,
-        remoteAddress,
-        remotePort,
-        protocol,
-        sslOptions,
-        database: databaseConf,
-        pve: PVEConf,
-        proxy: proxyConf,
-    }: Configuration) {
-        this.listenAddress = listenAddress;
-        this.listenPort = listenPort;
-        this.remoteAddress = remoteAddress;
-        this.remotePort = remotePort;
-        this.protocol = protocol;
-        this.sslOptions = sslOptions;
-        this.proxyConfig = proxyConf;
-
+    constructor(public readonly config: Configuration) {
         this.configureLoggers();
 
         this.proxyManager = new ProxyManager(this);
 
         this.setupHttp();
 
-        this.connectDatabase(databaseConf);
+        this.connectDatabase(this.config.database);
 
         this.proxmoxClient = new ProxmoxConnection({
-            hostname: PVEConf.hostname,
-            protocol: PVEConf.protocol,
-            username: PVEConf.username,
-            password: PVEConf.password,
+            hostname: config.pve.hostname,
+            protocol: config.pve.protocol,
+            username: config.pve.username,
+            password: config.pve.password,
             port: 80,
             pveLogger: this.pveLogger,
             mySQLClient: this.mySQLClient,

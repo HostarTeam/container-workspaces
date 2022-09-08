@@ -12,24 +12,39 @@ import { printError, printSuccess } from './lib/util/utils';
  * @returns {void}
  */
 export default function setupHttp(this: ContainerWorkspaces): void {
-    if (this.protocol === 'http') {
+    if (this.config.protocol === 'http') {
         this.httpServer = createHttpServer();
-    } else if (this.protocol === 'https') {
-        if (!existsSync(this.sslOptions.key)) {
-            printError(`The key file '${this.sslOptions.key}' does not exist.`);
-            process.exit(1);
-        } else if (!existsSync(this.sslOptions.cert)) {
+        this.wssHttpServer = createHttpServer();
+    } else if (this.config.protocol === 'https') {
+        if (!existsSync(this.config.sslOptions.key)) {
             printError(
-                `The cert file '${this.sslOptions.cert}' does not exist.`
+                `The key file '${this.config.sslOptions.key}' does not exist.`
+            );
+            process.exit(1);
+        } else if (!existsSync(this.config.sslOptions.cert)) {
+            printError(
+                `The cert file '${this.config.sslOptions.cert}' does not exist.`
             );
             process.exit(1);
         }
         this.httpServer = createHttpsServer({
-            key: readFileSync(this.sslOptions.key, { encoding: 'utf-8' }),
-            cert: readFileSync(this.sslOptions.cert, { encoding: 'utf-8' }),
+            key: readFileSync(this.config.sslOptions.key, {
+                encoding: 'utf-8',
+            }),
+            cert: readFileSync(this.config.sslOptions.cert, {
+                encoding: 'utf-8',
+            }),
+        });
+        this.wssHttpServer = createHttpsServer({
+            key: readFileSync(this.config.sslOptions.key, {
+                encoding: 'utf-8',
+            }),
+            cert: readFileSync(this.config.sslOptions.cert, {
+                encoding: 'utf-8',
+            }),
         });
     } else {
-        printError(`Unknown protocol '${this.protocol}'`);
+        printError(`Unknown protocol '${this.config.protocol}'`);
         process.exit(1);
     }
 
@@ -57,9 +72,13 @@ export default function setupHttp(this: ContainerWorkspaces): void {
 
     this.initWebSocketServer();
 
-    this.httpServer.listen(this.listenPort, this.listenAddress, () => {
-        printSuccess(
-            `App is running on ${this.listenAddress}:${this.listenPort} - ${this.protocol}://${this.remoteAddress}:${this.remotePort}`
-        );
-    });
+    this.httpServer.listen(
+        this.config.listenPort,
+        this.config.listenAddress,
+        () => {
+            printSuccess(
+                `App is running on ${this.config.listenAddress}:${this.config.listenPort} - ${this.config.protocol}://${this.config.remoteAddress}:${this.config.remotePort}`
+            );
+        }
+    );
 }
