@@ -7,6 +7,7 @@ import { execAsync, getLastLines } from '../lib/utils';
 import { ActualExecException, ExecReportError } from '../lib/typing/errors';
 import Ticket from '../lib/typing/Ticket';
 import { chmodSync, mkdtempSync, writeFileSync } from 'fs';
+import { rm } from 'fs/promises';
 
 export default class MessageRouting {
     [key: string]: (agent: Agent, task: Task) => Promise<void>;
@@ -201,12 +202,17 @@ export default class MessageRouting {
                     });
 
                 agent.sendData(clientCommand);
+                agent.logger.info(
+                    `Finished executing script with id: ${task.id}`
+                );
             });
 
             // TODO: Handle timeout
 
             agent.logger.info(`Executed script with task id: ${task.id}`);
-
+            rm(tmpDir, { recursive: true, force: true }).catch(() => {
+                agent.logger.error('Could not delete temporary exec directory');
+            });
             const clientCommand: MessageDataResponse = new MessageDataResponse({
                 taskid: task.id,
                 action: 'shell_exec_sync',
