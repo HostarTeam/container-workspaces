@@ -5,6 +5,8 @@ import { createServer as createHttpServer } from 'http';
 import { createServer as createHttpsServer } from 'https';
 import ContainerWorkspaces from './ContainerWorkspaces';
 import { printError, printSuccess } from './lib/util/utils';
+import { Server as SocketIOServer } from 'socket.io';
+import { ClientToServerEvents, ServerToClientEvents } from './lib/typing/types';
 
 /**
  * Setup the http server
@@ -68,9 +70,13 @@ export default function setupHttp(this: ContainerWorkspaces): void {
     this.webApp.use('/api/pm', this.authMiddleware(), this.pmRouter);
     this.webApp.use('/api', this.authMiddleware(), this.mainRouter);
 
+    this.io = new SocketIOServer<ClientToServerEvents, ServerToClientEvents>(
+        this.httpServer
+    );
     this.httpServer.on('request', this.webApp);
 
     this.initWebSocketServer();
+    this.initSocketIOServer();
 
     this.httpServer.listen(
         this.config.listenPort,
@@ -78,6 +84,16 @@ export default function setupHttp(this: ContainerWorkspaces): void {
         () => {
             printSuccess(
                 `App is running on ${this.config.listenAddress}:${this.config.listenPort} - ${this.config.protocol}://${this.config.remoteAddress}:${this.config.remotePort}`
+            );
+        }
+    );
+
+    this.wssHttpServer.listen(
+        this.config.listenWssPort,
+        this.config.listenAddress,
+        () => {
+            printSuccess(
+                `Agent to daemon communication wss running on ${this.config.listenAddress}:${this.config.listenWssPort} - ${this.config.protocol}://${this.config.remoteAddress}:${this.config.remoteWssPort}`
             );
         }
     );

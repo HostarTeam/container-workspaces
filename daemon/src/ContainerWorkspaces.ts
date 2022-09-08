@@ -5,6 +5,7 @@ import { createProxyServer } from 'http-proxy';
 import { Server as HttpsServer } from 'https';
 import { Log4js, Logger } from 'log4js';
 import { parse } from 'path';
+import { Server as SocketIOServer, Socket as SocketIOSocket } from 'socket.io';
 import { WebSocket, WebSocketServer } from 'ws';
 import setupHttp from './http';
 import CT from './lib/entities/CT';
@@ -20,7 +21,14 @@ import { initMainRouter } from './lib/routers/main';
 import { initPMRouter } from './lib/routers/pm';
 import { MessageData } from './lib/typing/MessageData';
 import { CTHardwareOptions } from './lib/typing/options';
-import { Config, Configuration, status, Ticket } from './lib/typing/types';
+import {
+    ClientToServerEvents,
+    Config,
+    Configuration,
+    ServerToClientEvents,
+    status,
+    Ticket,
+} from './lib/typing/types';
 import {
     checkAuthToken,
     checkContainerID,
@@ -70,8 +78,11 @@ export default class ContainerWorkspaces {
     public proxmoxClient: ProxmoxConnection;
     protected mySQLClient: MySQLClient;
     protected proxyManager: ProxyManager;
+    public io: SocketIOServer<ClientToServerEvents, ServerToClientEvents>;
+    public taskToSocketId: Map<Task['id'], SocketIOSocket['id']>;
 
     constructor(public readonly config: Configuration) {
+        this.taskToSocketId = new Map();
         this.configureLoggers();
 
         this.proxyManager = new ProxyManager(this);
@@ -107,7 +118,7 @@ export default class ContainerWorkspaces {
             });
         });
 
-        this.httpServer.on('upgrade', async (request, socket, head) => {
+        this.wssHttpServer.on('upgrade', async (request, socket, head) => {
             const connected = this.getConnectedClient(
                 request.socket.remoteAddress
             );
@@ -167,6 +178,82 @@ export default class ContainerWorkspaces {
                 }
             } else request.destroy();
         });
+    }
+
+    /**
+     * Inititalize the socket.io server.
+     * @protected
+     * @method
+     * @returns {void}
+     */
+    protected initSocketIOServer(): void {
+        this.io.on(
+            'connection',
+            async (
+                socket: SocketIOSocket<
+                    ClientToServerEvents,
+                    ServerToClientEvents
+                >
+            ) => {
+                // check authentication
+                const token = socket.handshake.auth.token as string;
+                if (!token || typeof token !== 'string')
+                    return socket.disconnect();
+
+                const authValid: boolean = await this.checkAuthToken(token);
+                if (!authValid) return socket.disconnect();
+
+                socket.on(
+                    'shell_exec_sync',
+                    async (containerIDRaw: string, script: string) => {
+                        try {
+                            const containerID = Number(containerIDRaw);
+                            if (!Number.isInteger(containerID))
+                                return socket.emit(
+                                    'shell_exec_error',
+                                    'Invalid container ID'
+                                );
+
+                            const containerIP =
+                                await this.proxmoxClient.getContainerIP(
+                                    containerID
+                                );
+                            if (
+                                !containerIP ||
+                                !(await this.checkIP(containerIP))
+                            )
+                                return socket.emit(
+                                    'shell_exec_error',
+                                    'Container not found'
+                                );
+                            const task = new Task({
+                                containerID: containerID,
+                                data: {
+                                    action: 'shell_exec_sync',
+                                    args: {
+                                        script: script,
+                                    },
+                                },
+                            });
+
+                            this.sendTaskToAgent(task, containerIP).catch(
+                                () => {
+                                    return socket.emit(
+                                        'shell_exec_error',
+                                        'Error occurred when trying to send task to agent'
+                                    );
+                                }
+                            );
+                            this.taskToSocketId.set(task.id, socket.id);
+                        } catch (err: unknown) {
+                            if (err instanceof Error) {
+                                socket.emit('shell_exec_error', err.message);
+                            }
+                        }
+                    }
+                );
+            }
+        );
     }
 
     /**

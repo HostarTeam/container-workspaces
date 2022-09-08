@@ -52,8 +52,12 @@ interface possibleArgs {
     password?: string;
     errorReport?: CommandError;
     lines?: string | null;
-    status?: 'success' | 'error';
+    status?: 'success' | 'error' | 'running';
     ticket?: Ticket;
+    script?: string;
+    output?: string;
+    outputType?: 'stdout' | 'stderr';
+    exitCode?: number;
 }
 
 /**
