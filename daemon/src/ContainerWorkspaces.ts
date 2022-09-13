@@ -34,6 +34,7 @@ import {
     checkContainerID,
     checkIP,
     createLoggers,
+    getEncodedBasicToken,
     printSuccess,
     sleep,
 } from './lib/util/utils';
@@ -196,10 +197,12 @@ export default class ContainerWorkspaces {
                 >
             ) => {
                 // check authentication
-                const token = socket.handshake.auth.token as string;
-                if (!token || typeof token !== 'string')
+                const authHeaderValue = socket.handshake.headers
+                    .authorization as string;
+                if (!authHeaderValue || typeof authHeaderValue !== 'string')
                     return socket.disconnect();
 
+                const token = getEncodedBasicToken(socket.handshake);
                 const authValid: boolean = await this.checkAuthToken(token);
                 if (!authValid) return socket.disconnect();
 

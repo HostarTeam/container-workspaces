@@ -349,7 +349,7 @@ export interface ClientToServerEvents {
 export interface ServerToClientEvents {
     shell_exec_error: (error_message: string) => void;
     shell_exec_output: (data: string, type: 'stdout' | 'stderr') => void;
-    shell_exec_started: () => void;
+    shell_exec_started: (pid: number) => void;
     shelll_exec_finished: (
         status: 'success' | 'error',
         exitCode: number

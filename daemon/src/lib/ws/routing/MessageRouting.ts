@@ -147,7 +147,7 @@ export default class MessageRouting {
         const socketID = cw.taskToSocketId.get(task.id);
 
         if (messageData.args?.status === 'running') {
-            cw.io.to(socketID).emit('shell_exec_started');
+            cw.io.to(socketID).emit('shell_exec_started', process.pid);
             return;
         }
 
