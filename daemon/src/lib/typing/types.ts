@@ -8,8 +8,10 @@ import { CTHardwareOptions } from './options';
 export interface Configuration {
     listenAddress: string;
     listenPort: number;
+    listenWssPort: number;
     remoteAddress: string;
     remotePort: number;
+    remoteWssPort: number;
     sslOptions?: {
         cert: string;
         key: string;
@@ -338,4 +340,18 @@ export interface VMResource {
     pool: string; // the pool name
     storage: string; // the storage name
     uptime: number; // the uptime in seconds
+}
+
+export interface ClientToServerEvents {
+    shell_exec_sync: (containerID: string, script: string) => void;
+}
+
+export interface ServerToClientEvents {
+    shell_exec_error: (error_message: string) => void;
+    shell_exec_output: (data: string, type: 'stdout' | 'stderr') => void;
+    shell_exec_started: (pid: number) => void;
+    shelll_exec_finished: (
+        status: 'success' | 'error',
+        exitCode: number
+    ) => void;
 }

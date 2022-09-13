@@ -5,6 +5,7 @@ import ProxmoxConnection from '../proxmox/ProxmoxConnection';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import log4js, { Log4js } from 'log4js';
 import { compareSync } from 'bcryptjs';
+import { Handshake } from 'socket.io/dist/socket';
 
 enum Colors {
     Reset = '\x1b[0m',
@@ -64,10 +65,10 @@ export async function readConfFile(): Promise<Configuration> {
 
 /**
  * Get the encoded basic token from the Authorization header of a request
- * @param  {Request} req
+ * @param  {Request | Handshake} req
  * @returns {string}
  */
-export function getEncodedBasicToken(req: Request): string | null {
+export function getEncodedBasicToken(req: Request | Handshake): string | null {
     const headerValue = req.headers['authorization'];
     if (!headerValue) return null;
     else return headerValue.split(' ').pop();

@@ -470,7 +470,7 @@ export async function createContainerInProxmox(
             vmid: Number(nextID),
             cores: options.ct_cores,
             description: 'Created by the API',
-            hostname: `${this.cw.protocol}491500${this.cw.remoteAddress}491500${this.cw.remotePort}`,
+            hostname: `${this.cw.config.protocol}491500${this.cw.config.remoteAddress}491500${this.cw.config.remotePort}`,
             password,
             rootfs: `local-lvm:${options.ct_disk}`,
             memory: options.ct_ram,
