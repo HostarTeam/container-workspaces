@@ -31,6 +31,7 @@ import {
     getIP,
     getIPs,
     getLocations,
+    locationExists,
     getNodeByLocation,
     getNodeIP,
     getNodeOfContainer,
@@ -50,6 +51,8 @@ import {
     restoreBackup,
     returnNodeIfFine,
     scoreNode,
+    getLocationByID,
+    addLocation,
     setCTAsReady,
     updateIPUsedStatus,
 } from './apiTools';
@@ -88,6 +91,7 @@ export default class ProxmoxConnection {
     protected getStorageNames = getStorageNames;
     protected getStorageOfBackup = getStorageOfBackup;
     protected getResources = getResources;
+    protected getLocationByID = getLocationByID;
     public getContainerIP = getContainerIP;
     public getNodeOfContainer = getNodeOfContainer;
     public getContainerInfo = getContainerInfo;
@@ -99,6 +103,8 @@ export default class ProxmoxConnection {
     public addNodeToDatabase = addNodeToDatabase;
     public removeNodeFromDatabase = removeNodeFromDatabase;
     public getLocations = getLocations;
+    public locationExists = locationExists;
+    public addLocation = addLocation;
     public getAvailableLocations = getAvailableLocations;
     public getSQLNode = getSQLNode;
     public getIP = getIP;
