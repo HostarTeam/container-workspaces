@@ -38,8 +38,12 @@ interface possibleArgs {
     password?: string;
     errorReport?: CommandErrorReport | ErrorReport;
     lines?: string | null;
-    status?: 'success' | 'error';
+    status?: 'success' | 'error' | 'running';
     ticket?: TicketOptions;
+    script?: string;
+    output?: string;
+    outputType?: 'stdout' | 'stderr';
+    exitCode?: number;
 }
 
 export class InvalidMessageError extends Error {

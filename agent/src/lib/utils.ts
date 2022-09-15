@@ -122,4 +122,5 @@ export function checkIfSocketClosed(socket: WebSocket): boolean {
     );
 }
 
-export const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+export const delay = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));

@@ -18,6 +18,7 @@ import { CreateCTOptions, CTHardwareOptions } from '../typing/options';
 import SQLNode from '../entities/SQLNode';
 import CT from '../entities/CT';
 import SQLIP from '../entities/SQLIP';
+import Location from '../entities/Location';
 
 /**
  * Call the proxmox API with options and return the response data.
@@ -90,7 +91,7 @@ export async function call<T>(
  */
 export async function getNodes(this: ProxmoxConnection): Promise<Node[]> {
     const { data: PVENodes } = await this.call<Node[]>('nodes', 'GET');
-    const sql = 'SELECT nodename FROM nodes';
+    const sql = 'SELECT nodename, location FROM nodes';
     const SQLNodes: SQLNode[] = SQLNode.fromObjects(
         await this.mySQLClient.getQueryResult(sql)
     );
@@ -191,24 +192,78 @@ export async function removeNodeFromDatabase(
  * @async
  * @returns {Promise<string[]>}
  */
-export async function getLocations(this: ProxmoxConnection): Promise<string[]> {
-    const sql = 'SELECT DISTINCT location FROM nodes';
-    const res: SQLNode[] = SQLNode.fromObjects(
+export async function getLocations(
+    this: ProxmoxConnection
+): Promise<Location[]> {
+    const sql = 'SELECT * FROM locations';
+    const res: Location[] = Location.fromObjects(
         await this.mySQLClient.getQueryResult(sql)
     );
 
-    return res.map((node: SQLNode) => node.location);
+    return res;
+}
+
+/**
+ * Check if location exists by its name.
+ * @async
+ * @param {string} location
+ * @returns {Promise<string>}
+ */
+export async function locationExists(
+    this: ProxmoxConnection,
+    location: string
+): Promise<boolean> {
+    const sql = 'SELECT location FROM locations WHERE location = ?';
+    const rawLocation = await this.mySQLClient.getFirstQueryResult(
+        sql,
+        location
+    );
+    if (!rawLocation) return false;
+    const res: Location = Location.fromObject(rawLocation);
+
+    return !!res;
+}
+
+/**
+ * Add a location to the database.
+ * @async
+ * @param  {string} location
+ */
+export async function addLocation(
+    this: ProxmoxConnection,
+    location: string
+): Promise<void> {
+    const sql = 'INSERT INTO locations (location) VALUES (?)';
+    await this.mySQLClient.executeQuery(sql, [location]);
+}
+
+/**
+ * Get location by its ID.
+ * @async
+ * @param {number} locationID
+ * @returns {Promise<Location>}
+ */
+export async function getLocationByID(
+    this: ProxmoxConnection,
+    locationID: number
+): Promise<Location> {
+    const sql = 'SELECT * FROM locations WHERE id = ?';
+    const res: Location = Location.fromObject(
+        await this.mySQLClient.getFirstQueryResult(sql, locationID)
+    );
+
+    return res;
 }
 
 /**
  * Get all locations where there are fine nodes
  * @async
- * @returns {Promise<string[]>}
+ * @returns {Promise<Location[]>}
  */
 export async function getAvailableLocations(
     this: ProxmoxConnection
-): Promise<string[]> {
-    const availableLocations: string[] = [];
+): Promise<Location[]> {
+    const availableLocations: number[] = [];
     const nodes = await this.getNodes();
     for (const node of nodes) {
         const sqlNode = await this.getSQLNode(node.node);
@@ -220,7 +275,12 @@ export async function getAvailableLocations(
             availableLocations.push(sqlNode.location);
         }
     }
-    return availableLocations;
+
+    return Promise.all(
+        availableLocations.map(
+            async (locationID) => await this.getLocationByID(locationID)
+        )
+    );
 }
 
 /**
@@ -470,7 +530,7 @@ export async function createContainerInProxmox(
             vmid: Number(nextID),
             cores: options.ct_cores,
             description: 'Created by the API',
-            hostname: `${this.cw.protocol}491500${this.cw.remoteAddress}491500${this.cw.remotePort}`,
+            hostname: `${this.cw.config.protocol}491500${this.cw.config.remoteAddress}491500${this.cw.config.remotePort}`,
             password,
             rootfs: `local-lvm:${options.ct_disk}`,
             memory: options.ct_ram,

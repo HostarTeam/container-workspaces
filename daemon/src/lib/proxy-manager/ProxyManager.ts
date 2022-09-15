@@ -49,7 +49,7 @@ export default class ProxyManager {
     protected validateWSProxy = validateWSProxy;
 
     constructor(public cw: ContainerWorkspaces) {
-        this.config = cw.proxyConfig;
+        this.config = cw.config.proxy;
         this.authMiddleware = cw.authMiddleware;
         this.accessTokens = new Map();
         this.containerProxyClient = new Map();
