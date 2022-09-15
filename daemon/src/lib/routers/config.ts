@@ -4,6 +4,7 @@ import { requireBodyProps } from '../util/utils';
 import { CTHardwareOptions } from '../typing/options';
 import SQLIP from '../entities/SQLIP';
 import SQLNode from '../entities/SQLNode';
+import Location from '../entities/Location';
 
 export function initConfigRouter(this: ContainerWorkspaces): void {
     this.configRouter = Router();
@@ -26,7 +27,7 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
         requireBodyProps('nodename', 'location', 'is_main'),
         async (req: Request, res: Response) => {
             const nodename = String(req.body.nodename);
-            const location = String(req.body.location);
+            const location = Number(req.body.location); // location id
             const is_main = Boolean(req.body.is_main);
 
             const pveNode = await this.proxmoxClient.getPVENode(nodename);
@@ -86,15 +87,40 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
      * This route is used in order to get all locations from the database.
      */
     router.get('/locations', async (req: Request, res: Response) => {
-        const locations: string[] = await this.proxmoxClient.getLocations();
+        const locations: Location[] = await this.proxmoxClient.getLocations();
         res.send(locations);
     });
+
+    /**
+     * This route is used in order to add a location to the database.
+     * @param {string} location The location to add in req.body.
+     */
+    router.post(
+        '/locations',
+        requireBodyProps('location'),
+        async (req: Request, res: Response) => {
+            const location = String(req.body.location);
+
+            if (await this.proxmoxClient.locationExists(location))
+                return res.status(409).send({
+                    status: 'conflict',
+                    message: 'Location already exists in the database',
+                });
+
+            await this.proxmoxClient.addLocation(location);
+
+            res.status(201).send({
+                status: 'created',
+                message: 'Location added successfully',
+            });
+        }
+    );
 
     /**
      * This route is used in order to get all available locations.
      */
     router.get('/locations/available', async (req: Request, res: Response) => {
-        const locations: string[] =
+        const locations: Location[] =
             await this.proxmoxClient.getAvailableLocations();
         res.send(locations);
     });

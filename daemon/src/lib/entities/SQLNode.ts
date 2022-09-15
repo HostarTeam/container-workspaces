@@ -18,7 +18,7 @@ class SQLNode extends Entity {
     public nodename: string;
     public is_main: boolean;
     public ip: string;
-    public location: string;
+    public location: number;
 
     constructor({ id, nodename, is_main, ip, location }: SQLNodeOptions) {
         super();
@@ -44,7 +44,8 @@ class SQLNode extends Entity {
         this.addRequiredProp(
             'location',
             location,
-            (value: string) => typeof value === 'string' && value.length > 0
+            (value: number) =>
+                typeof value === 'number' && Number.isInteger(value)
         );
     }
 
@@ -64,7 +65,7 @@ class SQLNode extends Entity {
             nodename: String(object.nodename),
             is_main: Boolean(object.is_main),
             ip: String(object.ip),
-            location: String(object.location),
+            location: Number(object.location),
         });
         return sqlNode;
     }
