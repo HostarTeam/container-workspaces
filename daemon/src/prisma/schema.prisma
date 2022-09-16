@@ -51,10 +51,10 @@ model nodes {
 }
 
 model tasks {
-  id          String  @id
+  id          String    @id
   containerID String
-  start_time  BigInt
-  end_time    BigInt?
+  start_time  DateTime  @default(now())
+  end_time    DateTime?
   data        String?
   status      String?
   error       String?
