@@ -51,7 +51,7 @@ model nodes {
 }
 
 model tasks {
-  id          String    @id
+  id          Int       @id @default(autoincrement())
   containerID Int
   start_time  DateTime  @default(now())
   end_time    DateTime?
