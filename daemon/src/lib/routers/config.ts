@@ -117,6 +117,72 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
     );
 
     /**
+     * This route is used in order to delete a location from the database.
+     * @param {number} id The location to add in req.body.
+     */
+    router.delete('/locations/:id', async (req: Request, res: Response) => {
+        const id = Number(req.params.id);
+
+        if (!id) {
+            return res.status(400).send({
+                status: 'bad request',
+                message: 'No location ID specified',
+            });
+        }
+
+        if (!Number.isInteger(id)) {
+            return res.status(400).send({
+                status: 'bad request',
+                message: 'Location ID must be an integer',
+            });
+        }
+
+        const location = await this.proxmoxClient.getLocation(id);
+        if (!location)
+            return res.status(404).send({
+                status: 'not found',
+                message: 'Location does not exist',
+            });
+
+        await this.proxmoxClient.deleteLocation(id);
+
+        res.send({
+            message: 'Location deleted successfully',
+        });
+    });
+
+    /**
+     * This route is used in order to delete a location from the database.
+     * @param {number} id The location to add in req.body.
+     */
+    router.get('/locations/:id', async (req: Request, res: Response) => {
+        const id = Number(req.params.id);
+
+        if (!id) {
+            return res.status(400).send({
+                status: 'bad request',
+                message: 'No location ID specified',
+            });
+        }
+
+        if (!Number.isInteger(id)) {
+            return res.status(400).send({
+                status: 'bad request',
+                message: 'Location ID must be an integer',
+            });
+        }
+
+        const location = await this.proxmoxClient.getLocation(id);
+        if (!location)
+            return res.status(404).send({
+                status: 'not found',
+                message: 'Location does not exist',
+            });
+
+        res.send(location);
+    });
+
+    /**
      * This route is used in order to get all available locations.
      */
     router.get('/locations/available', async (req: Request, res: Response) => {

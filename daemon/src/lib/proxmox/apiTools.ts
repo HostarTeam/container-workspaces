@@ -234,25 +234,39 @@ export async function addLocation(
     location: string
 ): Promise<void> {
     const sql = 'INSERT INTO locations (location) VALUES (?)';
-    await this.mySQLClient.executeQuery(sql, [location]);
+    await this.mySQLClient.executeQuery(sql, location);
+}
+
+/**
+ * Delete a location from the database
+ * @async
+ * @param {number} id
+ */
+export async function deleteLocation(
+    this: ProxmoxConnection,
+    id: Location['id']
+): Promise<void> {
+    const sql = 'DELETE FROM locations where ID = ?';
+    await this.mySQLClient.executeQuery(sql, id);
 }
 
 /**
  * Get location by its ID.
  * @async
- * @param {number} locationID
+ * @param {number} id
  * @returns {Promise<Location>}
  */
-export async function getLocationByID(
+export async function getLocation(
     this: ProxmoxConnection,
-    locationID: number
+    id: number
 ): Promise<Location> {
     const sql = 'SELECT * FROM locations WHERE id = ?';
-    const res: Location = Location.fromObject(
-        await this.mySQLClient.getFirstQueryResult(sql, locationID)
-    );
+    const rawLocation = await this.mySQLClient.getFirstQueryResult(sql, id);
 
-    return res;
+    if (!rawLocation) return null;
+
+    const location = Location.fromObject(rawLocation);
+    return location;
 }
 
 /**
@@ -278,7 +292,7 @@ export async function getAvailableLocations(
 
     return Promise.all(
         availableLocations.map(
-            async (locationID) => await this.getLocationByID(locationID)
+            async (locationID) => await this.getLocation(locationID)
         )
     );
 }
