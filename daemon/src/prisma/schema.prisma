@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model clients {
+  client_id     String @id
+  client_secret String
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model config {
+  config Json
+
+  @@ignore
+}
+
+model cts {
+  id    Int     @id @default(autoincrement())
+  ipv4  String
+  ready Boolean
+}
+
+model ips {
+  id      Int     @id @default(autoincrement())
+  ipv4    String
+  gateway String
+  netmask String
+  used    Boolean
+  nodes   Json?
+}
+
+model locations {
+  id       Int    @id @default(autoincrement())
+  location String
+}
+
+model nodes {
+  id       Int     @id @default(autoincrement())
+  nodename String
+  is_main  Boolean
+  ip       String
+  location Int
+}
+
+model tasks {
+  id          String  @id
+  containerID String
+  start_time  BigInt
+  end_time    BigInt?
+  data        String?
+  status      String?
+  error       String?
+}
