@@ -55,7 +55,7 @@ model tasks {
   containerID String
   start_time  DateTime  @default(now())
   end_time    DateTime?
-  data        String?
+  data        Json?
   status      String?
   error       String?
 }
