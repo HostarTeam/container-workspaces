@@ -8,49 +8,59 @@ datasource db {
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model clients {
+model Client {
   client_id     String @id
   client_secret String
 
+  @@map("clients")
   @@ignore
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model config {
+model Config {
   config Json
 
+  @@map("config")
   @@ignore
 }
 
-model cts {
+model Container {
   id    Int     @id @default(autoincrement())
   ipv4  String
   ready Boolean
+
+  @@map("cts")
 }
 
-model ips {
+model IP {
   id      Int     @id @default(autoincrement())
   ipv4    String
   gateway String
   netmask String
   used    Boolean
   nodes   Json?
+
+  @@map("ips")
 }
 
-model locations {
+model Location {
   id       Int    @id @default(autoincrement())
   location String
+
+  @@map("locations")
 }
 
-model nodes {
+model Node {
   id       Int     @id @default(autoincrement())
   nodename String
   is_main  Boolean
   ip       String
   location Int
+
+  @@map("nodes")
 }
 
-model tasks {
+model Task {
   id          Int       @id @default(autoincrement())
   containerID Int
   start_time  DateTime  @default(now())
@@ -58,4 +68,6 @@ model tasks {
   data        Json?
   status      String?
   error       String?
+
+  @@map("tasks")
 }
