@@ -32,7 +32,7 @@ model Container {
   @@map("cts")
 }
 
-model IP {
+model Ip {
   id      Int     @id @default(autoincrement())
   ipv4    String
   gateway String
