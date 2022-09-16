@@ -51,8 +51,9 @@ import {
     restoreBackup,
     returnNodeIfFine,
     scoreNode,
-    getLocationByID,
+    getLocation,
     addLocation,
+    deleteLocation,
     setCTAsReady,
     updateIPUsedStatus,
 } from './apiTools';
@@ -91,7 +92,7 @@ export default class ProxmoxConnection {
     protected getStorageNames = getStorageNames;
     protected getStorageOfBackup = getStorageOfBackup;
     protected getResources = getResources;
-    protected getLocationByID = getLocationByID;
+    public getLocation = getLocation;
     public getContainerIP = getContainerIP;
     public getNodeOfContainer = getNodeOfContainer;
     public getContainerInfo = getContainerInfo;
@@ -105,6 +106,7 @@ export default class ProxmoxConnection {
     public getLocations = getLocations;
     public locationExists = locationExists;
     public addLocation = addLocation;
+    public deleteLocation = deleteLocation;
     public getAvailableLocations = getAvailableLocations;
     public getSQLNode = getSQLNode;
     public getIP = getIP;
