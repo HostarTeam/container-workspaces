@@ -46,7 +46,7 @@ jobs:
 
     AgentCD:
         name: Agent CD
-        needs: InitPM2
+        needs: [DaemonCD]
         runs-on: [self-hosted, stg-deployment]
         defaults:
             run:
