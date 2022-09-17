@@ -40,9 +40,9 @@ jobs:
             - name: Install clean state
               run: npm ci
             - name: Building project
-              run: npm run build --if-present
+              run: npm run compile --if-present
             - name: Start PM2 process
-              run: sudo pm2 start --name cw-daemon ./dist/app.js
+              run: sudo pm2 start --name cw-daemon ./build/usr/bin/cw-daemon
 
     AgentCD:
         name: Agent CD
@@ -67,6 +67,6 @@ jobs:
             - name: Install clean state
               run: npm ci
             - name: Building project
-              run: npm run build --if-present
+              run: npm run compile --if-present
             - name: Start PM2 process
-              run: sudo pm2 start --name cw-agent ./dist/app.js
+              run: sudo pm2 start --name cw-agent ./build/usr/bin/cw-agent
