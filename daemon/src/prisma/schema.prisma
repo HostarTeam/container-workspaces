@@ -7,21 +7,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
 model Client {
   client_id     String @id
   client_secret String
 
   @@map("clients")
-  @@ignore
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
 model Config {
+  id     Int  @id @default(autoincrement())
   config Json
 
   @@map("config")
-  @@ignore
 }
 
 model Container {
