@@ -15,10 +15,7 @@ import {
     VMResource,
 } from '../typing/types';
 import { CreateCTOptions, CTHardwareOptions } from '../typing/options';
-import SQLNode from '../entities/SQLNode';
-import CT from '../entities/CT';
-import SQLIP from '../entities/SQLIP';
-import Location from '../entities/Location';
+import { Container, Node as SQLNode, Ip as IP, Location } from '@prisma/client';
 
 /**
  * Call the proxmox API with options and return the response data.
@@ -91,10 +88,12 @@ export async function call<T>(
  */
 export async function getNodes(this: ProxmoxConnection): Promise<Node[]> {
     const { data: PVENodes } = await this.call<Node[]>('nodes', 'GET');
-    const sql = 'SELECT nodename, location FROM nodes';
-    const SQLNodes: SQLNode[] = SQLNode.fromObjects(
-        await this.mySQLClient.getQueryResult(sql)
-    );
+    const SQLNodes = await this.prismaClient.node.findMany({
+        select: {
+            nodename: true,
+            location: true,
+        },
+    });
     const SQLNodenames: string[] = SQLNodes.map((node) => node.nodename);
     const nodes = PVENodes.filter((node) => SQLNodenames.includes(node.node));
     return nodes;
@@ -112,11 +111,11 @@ export async function getPVENode(
 ): Promise<{ node: Node; existsInDatabase: boolean }> {
     const nodes = await this.getNodes();
     const node = nodes.find((node) => node.node === nodename);
-    const sql = 'SELECT nodename FROM nodes WHERE nodename = ?';
-    const existsInDatabase = !!this.mySQLClient.getFirstQueryResult(
-        sql,
-        nodename
-    );
+    const existsInDatabase = !!(await this.prismaClient.node.findUnique({
+        where: {
+            nodename: nodename,
+        },
+    }));
     return { node, existsInDatabase };
 }
 
@@ -126,12 +125,7 @@ export async function getPVENode(
  * @returns {Promise<SQLNode[]>}
  */
 export async function getSQLNodes(this: ProxmoxConnection): Promise<SQLNode[]> {
-    const sql = 'SELECT * FROM nodes';
-    const res: SQLNode[] = SQLNode.fromObjects(
-        await this.mySQLClient.getQueryResult(sql)
-    );
-    if (res.length < 1) return null;
-    return res;
+    return await this.prismaClient.node.findMany();
 }
 
 /**
@@ -144,10 +138,11 @@ export async function getSQLNode(
     this: ProxmoxConnection,
     nodename: string
 ): Promise<SQLNode> {
-    const sql = 'SELECT * FROM nodes WHERE nodename = ?';
-    const node: SQLNode = SQLNode.fromObject(
-        await this.mySQLClient.getFirstQueryResult(sql, nodename)
-    );
+    const node: SQLNode = await this.prismaClient.node.findFirst({
+        where: {
+            nodename: nodename,
+        },
+    });
     if (!node) return null;
     node.is_main = !!node.is_main;
     return node;
@@ -161,16 +156,9 @@ export async function getSQLNode(
  */
 export async function addNodeToDatabase(
     this: ProxmoxConnection,
-    node: SQLNode
+    node: Omit<SQLNode, 'id'>
 ): Promise<void> {
-    const sql =
-        'INSERT INTO nodes (nodename, is_main ip, location) VALUES (?, ?, ?, ?)';
-    await this.mySQLClient.executeQuery(sql, [
-        node.nodename,
-        node.is_main ? 1 : 0,
-        node.ip,
-        node.location,
-    ]);
+    await this.prismaClient.node.create({ data: node });
 }
 
 /**
@@ -183,8 +171,7 @@ export async function removeNodeFromDatabase(
     this: ProxmoxConnection,
     nodename: string
 ): Promise<void> {
-    const sql = 'DELETE FROM nodes WHERE nodename = ?';
-    await this.mySQLClient.executeQuery(sql, [nodename]);
+    await this.prismaClient.node.delete({ where: { nodename: nodename } });
 }
 
 /**
@@ -195,12 +182,7 @@ export async function removeNodeFromDatabase(
 export async function getLocations(
     this: ProxmoxConnection
 ): Promise<Location[]> {
-    const sql = 'SELECT * FROM locations';
-    const res: Location[] = Location.fromObjects(
-        await this.mySQLClient.getQueryResult(sql)
-    );
-
-    return res;
+    return await this.prismaClient.location.findMany();
 }
 
 /**
@@ -213,13 +195,11 @@ export async function locationExists(
     this: ProxmoxConnection,
     location: string
 ): Promise<boolean> {
-    const sql = 'SELECT location FROM locations WHERE location = ?';
-    const rawLocation = await this.mySQLClient.getFirstQueryResult(
-        sql,
-        location
-    );
-    if (!rawLocation) return false;
-    const res: Location = Location.fromObject(rawLocation);
+    const res = await this.prismaClient.location.findFirst({
+        where: {
+            location: location,
+        },
+    });
 
     return !!res;
 }
@@ -233,8 +213,7 @@ export async function addLocation(
     this: ProxmoxConnection,
     location: string
 ): Promise<void> {
-    const sql = 'INSERT INTO locations (location) VALUES (?)';
-    await this.mySQLClient.executeQuery(sql, location);
+    await this.prismaClient.location.create({ data: { location: location } });
 }
 
 /**
@@ -246,8 +225,7 @@ export async function deleteLocation(
     this: ProxmoxConnection,
     id: Location['id']
 ): Promise<void> {
-    const sql = 'DELETE FROM locations where ID = ?';
-    await this.mySQLClient.executeQuery(sql, id);
+    await this.prismaClient.location.delete({ where: { id } });
 }
 
 /**
@@ -260,13 +238,13 @@ export async function getLocation(
     this: ProxmoxConnection,
     id: number
 ): Promise<Location> {
-    const sql = 'SELECT * FROM locations WHERE id = ?';
-    const rawLocation = await this.mySQLClient.getFirstQueryResult(sql, id);
+    const location: Location = await this.prismaClient.location.findFirst({
+        where: {
+            id: id,
+        },
+    });
 
-    if (!rawLocation) return null;
-
-    const location = Location.fromObject(rawLocation);
-    return location;
+    return location || null;
 }
 
 /**
@@ -335,8 +313,7 @@ export async function deleteContainerFromDB(
     this: ProxmoxConnection,
     id: number
 ): Promise<void> {
-    const sql = 'DELETE FROM cts WHERE id = ?';
-    await this.mySQLClient.executeQuery(sql, [id]);
+    await this.prismaClient.container.delete({ where: { id } });
 }
 
 /**
@@ -357,7 +334,7 @@ export async function deleteContainer(
             `nodes/${node}/lxc/${id}?force=1`,
             'DELETE'
         );
-        const ip: SQLIP = await this.getIP(ipv4);
+        const ip: IP = await this.getIP(ipv4);
         await this.updateIPUsedStatus(ip, false);
         await this.deleteContainerFromDB(id);
         if (deletedRes && deletedRes.data && !deletedRes.errors)
@@ -377,15 +354,12 @@ export async function deleteContainer(
 /**
  * Get an ip which is not used from the database.
  * @async
- * @returns {Promise<SQLIP | null>}
+ * @returns {Promise<IP | null>}
  */
-export async function getFreeIP(
-    this: ProxmoxConnection
-): Promise<SQLIP | null> {
-    const sql = `SELECT * FROM ips WHERE used = 0 LIMIT 1`;
-    const result: SQLIP = SQLIP.fromObject(
-        await this.mySQLClient.getFirstQueryResult(sql)
-    );
+export async function getFreeIP(this: ProxmoxConnection): Promise<IP | null> {
+    const result: IP = await this.prismaClient.ip.findFirst({
+        where: { used: false },
+    });
     if (!result) return null;
     return result;
 }
@@ -393,13 +367,10 @@ export async function getFreeIP(
 /**
  * Get all ips saved in the database.
  * @async
- * @returns {Promise<SQLIP[]>}
+ * @returns {Promise<IP[]>}
  */
-export async function getIPs(this: ProxmoxConnection): Promise<SQLIP[]> {
-    const sql = 'SELECT * FROM ips';
-    const res: SQLIP[] = SQLIP.fromObjects(
-        await this.mySQLClient.getQueryResult(sql)
-    );
+export async function getIPs(this: ProxmoxConnection): Promise<IP[]> {
+    const res = await this.prismaClient.ip.findMany();
     if (!res) return null;
     return res;
 }
@@ -407,21 +378,14 @@ export async function getIPs(this: ProxmoxConnection): Promise<SQLIP[]> {
 /**
  * Add an ip to the database.
  * @async
- * @param  {SQLIP} ip
+ * @param  {IP} ip
  * @returns {Promise<void>}
  */
 export async function addIPToDatabase(
     this: ProxmoxConnection,
-    ip: SQLIP
+    ip: Omit<IP, keyof { nodes; id }>
 ): Promise<void> {
-    const sql =
-        'INSERT INTO ips (ipv4, gateway, netmask, used) VALUES (?, ?, ?, ?)';
-    await this.mySQLClient.executeQuery(sql, [
-        ip.ipv4,
-        ip.gateway,
-        ip.netmask,
-        ip.used ? 1 : 0,
-    ]);
+    await this.prismaClient.ip.create({ data: ip });
 }
 
 /**
@@ -434,42 +398,38 @@ export async function removeIPFromDatabase(
     this: ProxmoxConnection,
     ipv4: string
 ): Promise<void> {
-    const sql = 'DELETE FROM ips WHERE ipv4 = ?';
-    await this.mySQLClient.executeQuery(sql, [ipv4]);
+    await this.prismaClient.ip.delete({ where: { ipv4 } });
 }
 
 /**
  * Get an SQLIP from the database based on its ipv4.
  * @async
  * @param  {string} ipv4
- * @returns {Promise<SQLIP | null>}
+ * @returns {Promise<IP | null>}
  */
 export async function getIP(
     this: ProxmoxConnection,
     ipv4: string
-): Promise<SQLIP | null> {
-    const sql = `SELECT * FROM ips WHERE ipv4 = ?`;
-    const result: SQLIP = SQLIP.fromObject(
-        await this.mySQLClient.getFirstQueryResult(sql, [ipv4])
-    );
-
-    return result; // Return value null if no IP was found
+): Promise<IP | null> {
+    return await this.prismaClient.ip.findFirst({ where: { ipv4 } });
 }
 
 /**
  * Update an ip's 'used' field in the database.
  * @async
- * @param  {SQLIP} ip
+ * @param  {IP} ip
  * @param  {boolean} status
  * @returns {Promise<void>}
  */
 export async function updateIPUsedStatus(
     this: ProxmoxConnection,
-    ip: SQLIP,
+    ip: IP,
     status: boolean
 ): Promise<void> {
-    const sql = `UPDATE ips SET used = ? WHERE ipv4 = ?`;
-    await this.mySQLClient.executeQuery(sql, [Number(status), ip.ipv4]);
+    await this.prismaClient.ip.update({
+        where: { id: ip.id },
+        data: { used: status },
+    });
 }
 
 /**
@@ -527,7 +487,7 @@ export async function createContainerInProxmox(
         options: CTHardwareOptions;
         node: string;
         template: string;
-        ip: SQLIP;
+        ip: IP;
         password: string;
     }
 ): Promise<ActionResult<{ ip: string; id: number } | null>> {
@@ -588,8 +548,12 @@ export async function addCotainerToDatabase(
     id: number,
     ipv4: string
 ): Promise<void> {
-    const sql = `INSERT INTO cts (id, ipv4) VALUES (?, ?)`;
-    await this.mySQLClient.executeQuery(sql, [id, ipv4]);
+    await this.prismaClient.container.create({
+        data: {
+            id,
+            ipv4,
+        },
+    });
 }
 
 /**
@@ -696,12 +660,11 @@ export function scoreNode(this: ProxmoxConnection, node: Node): number {
  */
 export async function getNodeByLocation(
     this: ProxmoxConnection,
-    location: string
+    locationID: Location['id']
 ): Promise<string> {
-    const query = 'SELECT * FROM nodes WHERE location = ?';
-    const nodes: SQLNode[] = SQLNode.fromObjects(
-        await this.mySQLClient.getQueryResult(query, [location])
-    );
+    const nodes = await this.prismaClient.node.findMany({
+        where: { location: locationID },
+    });
 
     return await this.getFirstFineNode(nodes);
 }
@@ -868,8 +831,10 @@ export async function setCTAsReady(
     this: ProxmoxConnection,
     id: number
 ): Promise<void> {
-    const sql = `UPDATE cts SET status = '1' WHERE id = ?`;
-    await this.mySQLClient.executeQuery(sql, [id]);
+    await this.prismaClient.container.update({
+        where: { id },
+        data: { ready: true },
+    });
 }
 
 /**
@@ -879,10 +844,7 @@ export async function setCTAsReady(
  */
 export async function getContainers(this: ProxmoxConnection): Promise<LXC[]> {
     const containersAsPromises: Promise<LXC>[] = [];
-    const sql = 'SELECT * FROM cts';
-    const cts: CT[] = CT.fromObjects(
-        await this.mySQLClient.getQueryResult(sql)
-    );
+    const cts: Container[] = await this.prismaClient.container.findMany();
     for (const ct of cts) {
         const containerData = this.getContainerInfo(ct.id);
         if (containerData) containersAsPromises.push(containerData);
@@ -901,10 +863,7 @@ export async function getContainerStatuses(
     this: ProxmoxConnection
 ): Promise<ContainerStatus[]> {
     const containerStatusesAsPromises: Promise<ContainerStatus>[] = [];
-    const sql = 'SELECT * FROM cts';
-    const cts: CT[] = CT.fromObjects(
-        await this.mySQLClient.getQueryResult(sql)
-    );
+    const cts: Container[] = await this.prismaClient.container.findMany();
     for (const ct of cts) {
         const containerData = this.getContainerStatus(ct.id);
         if (containerData) containerStatusesAsPromises.push(containerData);

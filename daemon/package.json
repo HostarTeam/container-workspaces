@@ -22,7 +22,6 @@
     },
     "homepage": "https://github.com/ubarilan/container-workspaces#readme",
     "dependencies": {
-        "@hostarteam/mysqlclient": "^1.0.6",
         "@prisma/client": "^4.3.1",
         "bcryptjs": "^2.4.3",
         "cookie-parser": "^1.4.6",

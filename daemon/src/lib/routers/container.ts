@@ -1,6 +1,5 @@
 import { Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
-import Task from '../entities/Task';
 import { MessageData } from '../typing/MessageData';
 import { ActionResult, ContainerStatus, LXC, Ticket } from '../typing/types';
 import { requireBodyProps, validatePassword, generateID } from '../util/utils';
@@ -79,8 +78,12 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
             };
 
             const agentIP: string = req.agentIP;
-
-            const task: Task = new Task({ data, containerID });
+            const task = await this.prismaClient.task.create({
+                data: {
+                    containerID,
+                    data: JSON.stringify(data),
+                },
+            });
 
             try {
                 await this.sendTaskToAgent(task, agentIP);
@@ -403,7 +406,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
         '/',
         requireBodyProps('location', 'template', 'password'),
         async (req: Request, res: Response) => {
-            const location = String(req.body.location);
+            const location = Number(req.body.location);
             const template = String(req.body.template);
             const password = String(req.body.password);
 
@@ -415,6 +418,12 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
                         'password is not valid, it must be between 5 and 100 characters long',
                 });
             }
+
+            if (isNaN(location))
+                return res.status(400).send({
+                    status: 'bad request',
+                    message: 'location is not a number',
+                });
 
             const created = await this.proxmoxClient.createContainer({
                 location,

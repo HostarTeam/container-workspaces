@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { Configuration, SQLClient } from '../typing/types';
+import { Configuration } from '../typing/types';
 import { Handler, NextFunction, Request, Response } from 'express';
 import ProxmoxConnection from '../proxmox/ProxmoxConnection';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
@@ -94,8 +94,11 @@ export async function checkIP(
     this: ContainerWorkspaces,
     ip: string
 ): Promise<boolean> {
-    const sql = 'SELECT ipv4 from cts';
-    const cts: { ipv4?: string }[] = await this.mySQLClient.getQueryResult(sql);
+    const cts = await this.prismaClient.container.findMany({
+        select: {
+            ipv4: true,
+        },
+    });
     const ips: string[] = cts.map((x) => x['ipv4']);
 
     return ips.includes(ip);
@@ -111,11 +114,13 @@ export async function checkContainerID(
     this: ContainerWorkspaces,
     containerID: number
 ): Promise<boolean> {
-    const sql = 'SELECT id from cts';
-    const cts: { id?: number }[] = await this.mySQLClient.getQueryResult(sql);
-    const ids: number[] = cts.map((x) => x['id']);
+    const ct = await this.prismaClient.container.findUnique({
+        where: {
+            id: containerID,
+        },
+    });
 
-    return ids.includes(containerID);
+    return !!ct;
 }
 
 /**
@@ -248,12 +253,12 @@ export async function checkAuthToken(
 ): Promise<boolean> {
     const decodedToken: string = Buffer.from(token, 'base64').toString();
     const [client_id, client_secret] = decodedToken.split(':');
-    const sql = 'SELECT client_secret FROM clients where client_id = ?';
 
-    const result: SQLClient = await this.mySQLClient.getFirstQueryResult(
-        sql,
-        client_id
-    );
+    const result = await this.prismaClient.client.findUnique({
+        where: {
+            client_id,
+        },
+    });
 
     if (!result) return false;
 
