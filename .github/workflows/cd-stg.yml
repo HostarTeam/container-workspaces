@@ -10,14 +10,12 @@ jobs:
     InitPM2:
         name: Initialize PM2 Daemon
         runs-on: [self-hosted, stg-deployment]
-        defaults:
-            run:
-                shell: bash
         steps:
-            - name: Stop all running pm2 processes
-              run: pm2 stop all
             - name: Delete all pm2 processes
-              run: pm2 delete all
+              run: sudo pm2 delete all
+              continue-on-error: true
+            - name: Validate there is a pm2 daemon running
+              run: sudo pm2 list
 
     DaemonCD:
         name: Daemon CD
@@ -26,7 +24,6 @@ jobs:
         defaults:
             run:
                 working-directory: ./daemon
-                shell: bash
 
         strategy:
             matrix:
@@ -45,7 +42,7 @@ jobs:
             - name: Building project
               run: npm run build --if-present
             - name: Start PM2 processe
-              run: pm2 start --name cw-daemon ./dist/app.js
+              run: sudo pm2 start --name cw-daemon ./dist/app.js
 
     AgentCD:
         name: Agent CD
@@ -54,7 +51,6 @@ jobs:
         defaults:
             run:
                 working-directory: ./agent
-                shell: bash
 
         strategy:
             matrix:
@@ -73,4 +69,4 @@ jobs:
             - name: Building project
               run: npm run build --if-present
             - name: Start PM2 processe
-              run: pm2 start --name cw-agent ./dist/app.js
+              run: sudo pm2 start --name cw-agent ./dist/app.js
