@@ -404,11 +404,35 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      */
     router.post(
         '/',
-        requireBodyProps('location', 'template', 'password'),
+        requireBodyProps('template', 'password'),
         async (req: Request, res: Response) => {
-            const location = Number(req.body.location);
             const template = String(req.body.template);
             const password = String(req.body.password);
+            let location: number | null = null;
+            let node: number | null = null;
+
+            if (req.body.location) {
+                if (Number.isInteger(req.body.location))
+                    location = Number(req.body.location);
+                else if (!req.body.node)
+                    return res.status(400).send({
+                        status: 'error',
+                        message: 'location must be an integer',
+                    });
+            } else if (req.body.node) {
+                if (!Number.isInteger(req.body.node))
+                    return res.status(400).send({
+                        status: 'error',
+                        message: 'node must be an integer',
+                    });
+                node = Number(req.body.node);
+            }
+
+            if (!node && !location)
+                return res.status(400).send({
+                    status: 'error',
+                    message: 'location or node must be specified',
+                });
 
             const passwordValid: boolean = validatePassword(password);
             if (!passwordValid) {
@@ -419,17 +443,20 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
                 });
             }
 
-            if (isNaN(location))
-                return res.status(400).send({
-                    status: 'bad request',
-                    message: 'location is not a number',
-                });
+            let created: ActionResult<{ ip: string; id: number }>;
 
-            const created = await this.proxmoxClient.createContainer({
-                location,
-                template,
-                password,
-            });
+            if (location)
+                created = await this.proxmoxClient.createContainerByLocation({
+                    location,
+                    template,
+                    password,
+                });
+            else
+                created = await this.proxmoxClient.createContainerByNode({
+                    node,
+                    template,
+                    password,
+                });
 
             if (created.ok)
                 res.status(201).send({
