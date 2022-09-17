@@ -30,7 +30,7 @@ export class MessageData {
  * @classdesc This class is used to define the data field in a task received from an agent
  */
 export class MessageDataResponse extends MessageData {
-    public taskid: string;
+    public taskid: number;
 
     constructor(props: MessageDataResponse) {
         super(props);
