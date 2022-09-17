@@ -10,6 +10,9 @@ jobs:
     InitPM2:
         name: Initialize PM2 Daemon
         runs-on: [self-hosted, stg-deployment]
+        defaults:
+            run:
+                shell: bash
         steps:
             - name: Stop all running pm2 processes
               run: pm2 stop all
@@ -23,6 +26,7 @@ jobs:
         defaults:
             run:
                 working-directory: ./daemon
+                shell: bash
 
         strategy:
             matrix:
@@ -50,6 +54,7 @@ jobs:
         defaults:
             run:
                 working-directory: ./agent
+                shell: bash
 
         strategy:
             matrix:
