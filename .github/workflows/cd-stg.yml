@@ -41,7 +41,7 @@ jobs:
               run: npm ci
             - name: Building project
               run: npm run build --if-present
-            - name: Start PM2 processe
+            - name: Start PM2 process
               run: sudo pm2 start --name cw-daemon ./dist/app.js
 
     AgentCD:
@@ -68,5 +68,5 @@ jobs:
               run: npm ci
             - name: Building project
               run: npm run build --if-present
-            - name: Start PM2 processe
+            - name: Start PM2 process
               run: sudo pm2 start --name cw-agent ./dist/app.js
