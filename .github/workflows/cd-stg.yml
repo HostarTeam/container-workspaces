@@ -11,8 +11,6 @@ jobs:
         name: Initialize PM2 Daemon
         runs-on: [self-hosted, stg-deployment]
         steps:
-            - name: Install pm2 globally
-              run: npm i --location=global pm2
             - name: Stop all running pm2 processes
               run: pm2 stop all
             - name: Delete all pm2 processes
