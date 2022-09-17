@@ -1,3 +1,5 @@
+import { Location } from '@prisma/client';
+
 /**
  * This interface is used to represent the hardware options in the configuration in the database
  * @interface
@@ -14,7 +16,7 @@ export interface CTHardwareOptions {
  * @interface
  */
 export interface CreateCTOptions {
-    location: string;
+    location: Location['id'];
     template: string;
     password: string;
 }

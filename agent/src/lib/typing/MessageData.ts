@@ -20,11 +20,12 @@ export class MessageData {
 }
 
 export class MessageDataResponse extends MessageData {
-    public taskid: string;
+    public taskid: number;
 
-    constructor(props: MessageDataResponse) {
+    constructor(props: MessageDataResponse, taskid?: number) {
         super(props);
-        if (props.taskid) this.taskid = props.taskid;
+        if (taskid) this.taskid = taskid;
+        else if (props.taskid) this.taskid = props.taskid;
         else
             throw new InvalidMessageError(
                 "Proroperty 'taskid' is missing from message"

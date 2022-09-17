@@ -1,5 +1,5 @@
+import { Task } from '@prisma/client';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
-import Task from '../entities/Task';
 
 /**
  * Send a task to an agent
@@ -20,7 +20,6 @@ export async function sendTaskToAgent(
             `Could not find a client with address ${ipaddr}`
         );
 
-    await this.addTask(task);
     selectedClient.send(JSON.stringify(task));
 }
 

@@ -1,4 +1,4 @@
-import { MySQLClient } from '@hostarteam/mysqlclient';
+import { PrismaClient } from '@prisma/client';
 import { Agent } from 'https';
 import { Logger } from 'log4js';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
@@ -66,7 +66,7 @@ export default class ProxmoxConnection {
     protected port: number;
     protected basicURL: string;
     protected pveLogger: Logger;
-    protected mySQLClient: MySQLClient;
+    protected prismaClient: PrismaClient;
     protected cw: ContainerWorkspaces;
     protected httpsAgent: Agent | undefined;
     protected verifyCertificate: boolean;
@@ -133,7 +133,7 @@ export default class ProxmoxConnection {
         password,
         port = 8006,
         pveLogger,
-        mySQLClient,
+        prismaClient,
         cw,
         verifyCertificate = true,
     }: {
@@ -143,7 +143,7 @@ export default class ProxmoxConnection {
         password: string;
         port?: number;
         pveLogger: Logger;
-        mySQLClient: MySQLClient;
+        prismaClient: PrismaClient;
         cw: ContainerWorkspaces;
         verifyCertificate: boolean;
     }) {
@@ -154,7 +154,7 @@ export default class ProxmoxConnection {
         this.password = password;
         this.port = port;
         this.pveLogger = pveLogger;
-        this.mySQLClient = mySQLClient;
+        this.prismaClient = prismaClient;
         this.verifyCertificate = verifyCertificate;
 
         this.intialize();
