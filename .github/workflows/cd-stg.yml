@@ -20,6 +20,7 @@ jobs:
 
     DaemonCD:
         name: Daemon CD
+        needs: InitPM2
         runs-on: [self-hosted, stg-deployment]
         defaults:
             run:
@@ -46,6 +47,7 @@ jobs:
 
     AgentCD:
         name: Agent CD
+        needs: InitPM2
         runs-on: [self-hosted, stg-deployment]
         defaults:
             run:
