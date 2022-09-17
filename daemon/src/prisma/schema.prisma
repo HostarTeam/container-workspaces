@@ -22,16 +22,16 @@ model Config {
 }
 
 model Container {
-  id    Int     @id @default(autoincrement())
+  id    Int     @id
   ipv4  String
-  ready Boolean
+  ready Boolean @default(false)
 
   @@map("cts")
 }
 
 model Ip {
   id      Int     @id @default(autoincrement())
-  ipv4    String
+  ipv4    String  @unique
   gateway String
   netmask String
   used    Boolean
@@ -49,7 +49,7 @@ model Location {
 
 model Node {
   id       Int     @id @default(autoincrement())
-  nodename String
+  nodename String  @unique
   is_main  Boolean
   ip       String
   location Int

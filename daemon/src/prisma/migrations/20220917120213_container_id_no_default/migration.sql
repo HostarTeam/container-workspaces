@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `cts` MODIFY `id` INTEGER NOT NULL;
