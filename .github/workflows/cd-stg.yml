@@ -1,0 +1,71 @@
+name: Stage CD
+
+on:
+    push:
+        branches: ['master']
+    pull_request:
+        branches: ['master']
+
+jobs:
+    InitPM2:
+        name: Initialize PM2 Daemon
+        runs-on: [self-hosted, stg-deployment]
+        steps:
+            - name: Install pm2 globally
+              run: npm i --location=global pm2
+            - name: Stop all running pm2 processes
+              run: pm2 stop all
+            - name: Delete all pm2 processes
+              run: pm2 delete all
+
+    DaemonCD:
+        name: Daemon CD
+        runs-on: [self-hosted, stg-deployment]
+        defaults:
+            run:
+                working-directory: ./daemon
+
+        strategy:
+            matrix:
+                node-version: [16.x]
+
+        steps:
+            - uses: actions/checkout@v3
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v3
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: 'npm'
+                  cache-dependency-path: ./daemon/package-lock.json
+            - name: Install clean state
+              run: npm ci
+            - name: Building project
+              run: npm run build --if-present
+            - name: Start PM2 processe
+              run: pm2 start --name cw-daemon ./dist/app.js
+
+    AgentCD:
+        name: Agent CD
+        runs-on: [self-hosted, stg-deployment]
+        defaults:
+            run:
+                working-directory: ./agent
+
+        strategy:
+            matrix:
+                node-version: [16.x]
+
+        steps:
+            - uses: actions/checkout@v3
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v3
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: 'npm'
+                  cache-dependency-path: ./agent/package-lock.json
+            - name: Install clean state
+              run: npm ci
+            - name: Building project
+              run: npm run build --if-present
+            - name: Start PM2 processe
+              run: pm2 start --name cw-agent ./dist/app.js
