@@ -447,7 +447,7 @@ export async function updateIPUsedStatus(
 /**
  * Create a container on a PVE node based on a location.
  * @async
- * @param {CreateCTOptions} options
+ * @param {CreateCTByLocationOptions} options
  * @param  {string} options.location
  * @param  {string} options.template
  * @param  {string} options.password
@@ -481,10 +481,10 @@ export async function createContainerByLocation(
 }
 
 /**
- * Create a container on a PVE node based on a location.
+ * Create a container on a PVE node based on a node.
  * @async
- * @param {CreateCTOptions} options
- * @param  {string} options.location
+ * @param {CreateCTByNodeOptions} options
+ * @param  {string} options.node
  * @param  {string} options.template
  * @param  {string} options.password
  * @returns {Promise<ActionResult>}
