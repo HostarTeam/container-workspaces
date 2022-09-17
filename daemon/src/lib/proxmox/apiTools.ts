@@ -111,7 +111,7 @@ export async function getPVENode(
 ): Promise<{ node: Node; existsInDatabase: boolean }> {
     const nodes = await this.getNodes();
     const node = nodes.find((node) => node.node === nodename);
-    const existsInDatabase = !!(await this.prismaClient.node.findUnique({
+    const existsInDatabase = !!(await this.prismaClient.node.findFirst({
         where: {
             nodename: nodename,
         },

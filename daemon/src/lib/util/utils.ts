@@ -114,7 +114,7 @@ export async function checkContainerID(
     this: ContainerWorkspaces,
     containerID: number
 ): Promise<boolean> {
-    const ct = await this.prismaClient.container.findUnique({
+    const ct = await this.prismaClient.container.findFirst({
         where: {
             id: containerID,
         },
@@ -254,7 +254,7 @@ export async function checkAuthToken(
     const decodedToken: string = Buffer.from(token, 'base64').toString();
     const [client_id, client_secret] = decodedToken.split(':');
 
-    const result = await this.prismaClient.client.findUnique({
+    const result = await this.prismaClient.client.findFirst({
         where: {
             client_id,
         },
