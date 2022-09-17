@@ -14,7 +14,11 @@ import {
     Storage,
     VMResource,
 } from '../typing/types';
-import { CreateCTOptions, CTHardwareOptions } from '../typing/options';
+import {
+    CreateCTByLocationOptions,
+    CreateCTByNodeOptions,
+    CTHardwareOptions,
+} from '../typing/options';
 import { Container, Node as SQLNode, Ip as IP, Location } from '@prisma/client';
 
 /**
@@ -82,7 +86,7 @@ export async function call<T>(
 }
 
 /**
- * Get all the nodes in the database.
+ * Get all the nodes in proxmox.
  * @async
  * @returns {Promise<Node[]>}
  */
@@ -356,9 +360,17 @@ export async function deleteContainer(
  * @async
  * @returns {Promise<IP | null>}
  */
-export async function getFreeIP(this: ProxmoxConnection): Promise<IP | null> {
+export async function getFreeIP(
+    this: ProxmoxConnection,
+    nodeid: number
+): Promise<IP | null> {
     const result: IP = await this.prismaClient.ip.findFirst({
-        where: { used: false },
+        where: {
+            used: false,
+            nodes: {
+                array_contains: nodeid,
+            },
+        },
     });
     if (!result) return null;
     return result;
@@ -441,27 +453,68 @@ export async function updateIPUsedStatus(
  * @param  {string} options.password
  * @returns {Promise<ActionResult>}
  */
-export async function createContainer(
+export async function createContainerByLocation(
     this: ProxmoxConnection,
-    { location, template, password }: CreateCTOptions
+    { location, template, password }: CreateCTByLocationOptions
 ): Promise<ActionResult<{ ip: string; id: number } | null>> {
-    const config = this.cw.getConfig();
+    const config = await this.cw.getConfig();
 
     const node = await this.getNodeByLocation(location);
+    const sqlNode = (await this.prismaClient.node.findMany()).filter(
+        (n) => n.nodename === node
+    )[0];
     const options = config['ct_options'];
-    const ip = await this.getFreeIP();
+    const ip = await this.getFreeIP(sqlNode.id);
     if (!ip) {
         this.pveLogger.error(`Could not find free ip while creating container`);
         return { error: 'Could not find free IP', ok: false };
     }
-    await this.updateIPUsedStatus(ip, true);
-    return await this.createContainerInProxmox({
+    const res = await this.createContainerInProxmox({
         options,
         node,
         template,
         ip,
         password,
     });
+    if (res.ok) await this.updateIPUsedStatus(ip, true);
+    return res;
+}
+
+/**
+ * Create a container on a PVE node based on a location.
+ * @async
+ * @param {CreateCTOptions} options
+ * @param  {string} options.location
+ * @param  {string} options.template
+ * @param  {string} options.password
+ * @returns {Promise<ActionResult>}
+ */
+export async function createContainerByNode(
+    this: ProxmoxConnection,
+    { node, template, password }: CreateCTByNodeOptions
+): Promise<ActionResult<{ ip: string; id: number } | null>> {
+    const config = await this.cw.getConfig();
+    const options = config['ct_options'];
+
+    const sqlNode = (await this.getSQLNodes()).find((n) => n.id === node);
+    if (!sqlNode) {
+        this.pveLogger.error(`Could not find node with id ${node}`);
+        return { error: 'Could not find node', ok: false };
+    }
+    const ip = await this.getFreeIP(sqlNode.id);
+    if (!ip) {
+        this.pveLogger.error(`Could not find free ip while creating container`);
+        return { error: 'Could not find free IP', ok: false };
+    }
+    const res = await this.createContainerInProxmox({
+        options,
+        node: sqlNode.nodename,
+        template,
+        ip,
+        password,
+    });
+    if (res.ok) await this.updateIPUsedStatus(ip, true);
+    return res;
 }
 
 /**
@@ -506,7 +559,7 @@ export async function createContainerInProxmox(
             description: 'Created by the API',
             hostname: `${this.cw.config.protocol}491500${this.cw.config.remoteAddress}491500${this.cw.config.remotePort}`,
             password,
-            rootfs: `local-lvm:${options.ct_disk}`,
+            rootfs: `nvme-img:${options.ct_disk}`,
             memory: options.ct_ram,
             swap: options.ct_swap,
             net0: `name=eth0,bridge=vmbr0,firewall=1,gw=${ip.gateway},ip=${
