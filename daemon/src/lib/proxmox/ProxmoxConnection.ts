@@ -12,7 +12,8 @@ import {
     changeContainerStatus,
     changeCTHostname,
     createBackup,
-    createContainer,
+    createContainerByLocation,
+    createContainerByNode,
     createContainerInProxmox,
     deleteBackup,
     deleteContainer,
@@ -77,7 +78,8 @@ export default class ProxmoxConnection {
     protected call = call;
     public getNodes = getNodes;
     public getNodesName = getNodesName;
-    public createContainer = createContainer;
+    public createContainerByLocation = createContainerByLocation;
+    public createContainerByNode = createContainerByNode;
     public getNodeIP = getNodeIP;
     public getNodeByLocation = getNodeByLocation;
     protected createContainerInProxmox = createContainerInProxmox;

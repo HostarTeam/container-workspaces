@@ -609,8 +609,7 @@ export default class ContainerWorkspaces {
     public async getConfig(): Promise<Config> {
         const rawConfig = await this.prismaClient.config.findFirst();
 
-        const config: Config = JSON.parse(<string>rawConfig.config);
-        return config;
+        return rawConfig.config as unknown as Config;
     }
 
     /**
