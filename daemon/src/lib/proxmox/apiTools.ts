@@ -265,10 +265,10 @@ export async function getAvailableLocations(
         const sqlNode = await this.getSQLNode(node.node);
         if (
             sqlNode &&
-            !availableLocations.includes(sqlNode.location) &&
+            !availableLocations.includes(sqlNode.locationId) &&
             this.returnIfNodeIsFine(node.node)
         ) {
-            availableLocations.push(sqlNode.location);
+            availableLocations.push(sqlNode.locationId);
         }
     }
 
@@ -720,7 +720,7 @@ export async function getNodeByLocation(
     locationID: Location['id']
 ): Promise<string> {
     const nodes = await this.prismaClient.node.findMany({
-        where: { location: locationID },
+        where: { location: { id: locationID } },
     });
 
     return await this.getFirstFineNode(nodes);

@@ -40,7 +40,7 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
                     nodename,
                     is_main,
                     ip: nodeIP,
-                    location,
+                    locationId: location,
                 });
                 res.status(201).send({
                     status: 'created',
