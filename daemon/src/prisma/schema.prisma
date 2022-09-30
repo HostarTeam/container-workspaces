@@ -36,7 +36,7 @@ model Ip {
   gateway String
   netmask String
   used    Boolean
-  nodes   Json?
+  nodes   Node[]
 
   @@map("ips")
 }
@@ -54,6 +54,7 @@ model Node {
   is_main  Boolean
   ip       String
   location Int
+  ips      Ip[]
 
   @@map("nodes")
 }
