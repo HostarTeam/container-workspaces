@@ -8,21 +8,23 @@ import { changeSystemHostname, getInfoFromHostname } from './lib/utils';
 export default class InitAgent {
     private readonly address: string;
     private readonly protocol: string;
-    private readonly port: number;
+    private readonly httpPort: number;
+    private readonly wsPort: number;
     protected logger: Logger;
     protected config: AgentConfiguration;
 
     constructor() {
-        const { protocol, address, port } = getInfoFromHostname();
+        const { protocol, address, httpPort, wsPort } = getInfoFromHostname();
         this.protocol = protocol;
         this.address = address;
-        this.port = port;
+        this.httpPort = httpPort;
+        this.wsPort = wsPort;
 
         this.config = {
-            apiServer: `${this.protocol}://${this.address}:${this.port}`,
+            apiServer: `${this.protocol}://${this.address}:${this.httpPort}`,
             socketServer: `${this.protocol === 'https' ? 'wss' : 'ws'}://${
                 this.address
-            }:${this.port}`,
+            }:${this.wsPort}`,
         };
         this.writeConfig();
         this.configureLogger();
