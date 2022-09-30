@@ -36,7 +36,7 @@ model Ip {
   gateway String
   netmask String
   used    Boolean
-  nodes   Json?
+  nodes   Node[]
 
   @@map("ips")
 }
@@ -44,16 +44,19 @@ model Ip {
 model Location {
   id       Int    @id @default(autoincrement())
   location String
+  node     Node[]
 
   @@map("locations")
 }
 
 model Node {
-  id       Int     @id @default(autoincrement())
-  nodename String  @unique
-  is_main  Boolean
-  ip       String
-  location Int
+  id         Int      @id @default(autoincrement())
+  nodename   String   @unique
+  is_main    Boolean
+  ip         String
+  location   Location @relation(fields: [locationId], references: [id])
+  ips        Ip[]
+  locationId Int
 
   @@map("nodes")
 }

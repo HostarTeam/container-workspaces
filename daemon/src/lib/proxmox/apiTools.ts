@@ -265,10 +265,10 @@ export async function getAvailableLocations(
         const sqlNode = await this.getSQLNode(node.node);
         if (
             sqlNode &&
-            !availableLocations.includes(sqlNode.location) &&
+            !availableLocations.includes(sqlNode.locationId) &&
             this.returnIfNodeIsFine(node.node)
         ) {
-            availableLocations.push(sqlNode.location);
+            availableLocations.push(sqlNode.locationId);
         }
     }
 
@@ -368,7 +368,9 @@ export async function getFreeIP(
         where: {
             used: false,
             nodes: {
-                array_contains: nodeid,
+                some: {
+                    id: nodeid,
+                },
             },
         },
     });
@@ -460,9 +462,11 @@ export async function createContainerByLocation(
     const config = await this.cw.getConfig();
 
     const node = await this.getNodeByLocation(location);
-    const sqlNode = (await this.prismaClient.node.findMany()).filter(
-        (n) => n.nodename === node
-    )[0];
+    const sqlNode = await this.prismaClient.node.findFirst({
+        where: {
+            nodename: node,
+        },
+    });
     const options = config['ct_options'];
     const ip = await this.getFreeIP(sqlNode.id);
     if (!ip) {
@@ -716,7 +720,7 @@ export async function getNodeByLocation(
     locationID: Location['id']
 ): Promise<string> {
     const nodes = await this.prismaClient.node.findMany({
-        where: { location: locationID },
+        where: { location: { id: locationID } },
     });
 
     return await this.getFirstFineNode(nodes);
