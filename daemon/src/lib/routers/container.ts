@@ -1,8 +1,8 @@
 import { Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { MessageData } from '../typing/MessageData';
-import { ActionResult, ContainerStatus, LXC, Ticket } from '../typing/types';
-import { requireBodyProps, validatePassword, generateID } from '../util/utils';
+import { ActionResult, ContainerStatus, LXC } from '../typing/types';
+import { requireBodyProps, validatePassword } from '../util/utils';
 import { ClientNotFoundError } from '../ws/commandAgent';
 
 export function initContainerRouter(this: ContainerWorkspaces): void {
@@ -301,39 +301,6 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
 
     /**
      * @param {string} containerID
-     * This route is used in order to get the password from openvscode-server.
-     */
-    router.get(
-        '/:containerID/vscode/password',
-        this.getContainerIP(),
-        async (req: Request, res: Response) => {
-            const containerID = Number(req.params.containerID);
-
-            const connectedAgent = this.getConnectedClient(req.agentIP);
-
-            if (!connectedAgent) {
-                res.status(409).send({
-                    status: 'conflict',
-                    message:
-                        'Container with given ID is not connected to this server',
-                });
-            } else {
-                const password = await this.getVSCodePassword(
-                    containerID,
-                    req.agentIP
-                );
-                if (password) res.send({ status: 'ok', password });
-                else
-                    res.status(409).send({
-                        status: 'conflict',
-                        message: 'could not get password from agent',
-                    });
-            }
-        }
-    );
-
-    /**
-     * @param {string} containerID
      * @param {string} password The new password of the container in req.body.
      * This route is used in order to change the password of a container.
      */
@@ -469,49 +436,6 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
                     message: 'could not create container',
                     error: created.error,
                 });
-        }
-    );
-
-    router.post(
-        '/:containerID/ticket',
-        this.getContainerIP(),
-        async (req: Request, res: Response) => {
-            const containerID = Number(req.params.containerID);
-
-            if (!this.getConnectedClient(req.agentIP))
-                return res.status(409).send({
-                    status: 'conflict',
-                    message:
-                        'Container with given ID is not connected to this server',
-                });
-
-            const ticketID = generateID();
-            const ticket: Ticket = {
-                id: ticketID,
-                expires: Date.now() + 1000 * 60 * 60 * 4, // 4 Hours
-            };
-
-            try {
-                await this.createTicket(containerID, ticket);
-                res.status(201).send({
-                    status: 'ok',
-                    ticket,
-                });
-            } catch (err: unknown) {
-                if (err instanceof ClientNotFoundError) {
-                    return res.status(409).send({
-                        status: 'conflict',
-                        message:
-                            'Container with given ID is not connected to this server',
-                    });
-                } else {
-                    return res.status(500).send({
-                        status: 'error',
-                        message: 'Could not create ticket',
-                        error: 'Unknown error',
-                    });
-                }
-            }
         }
     );
 }

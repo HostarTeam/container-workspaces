@@ -54,6 +54,7 @@ export default class MessageRouting {
             messageData.args?.status === 'error' &&
             messageData.args?.errorReport
         ) {
+            cw.wsEventEmitter.emit(String(task.id));
             cw.errorTask(
                 task.id,
                 <Error>(<unknown>messageData.args.errorReport)
@@ -62,7 +63,7 @@ export default class MessageRouting {
                 `Error in agent with id ${task.containerID} in task ${task.id} - ${messageData.args.errorReport.message}`
             );
         } else {
-            cw.logLines.set(task.id, messageData.args.lines);
+            cw.wsEventEmitter.emit(String(task.id), messageData.args.lines);
             cw.wsLogger.info(
                 `Succeded agent with id ${task.containerID} in task ${task.id} - ${messageData.args.status}`
             );
@@ -96,7 +97,7 @@ export default class MessageRouting {
         }
     }
 
-    public static async get_vscode_password(
+    public static async get_service_auth_token(
         cw: ContainerWorkspaces,
         req: IncomingMessage,
         messageData: MessageDataResponse
@@ -107,6 +108,7 @@ export default class MessageRouting {
             messageData.args?.status === 'error' &&
             messageData.args?.errorReport
         ) {
+            cw.wsEventEmitter.emit(String(task.id));
             cw.errorTask(
                 task.id,
                 <Error>(<unknown>messageData.args.errorReport)
@@ -115,7 +117,7 @@ export default class MessageRouting {
                 `Error in agent with id ${task.containerID} in task ${task.id} - ${messageData.args.errorReport.message}`
             );
         } else {
-            cw.codeServerPasswords.set(task.id, messageData.args.password);
+            cw.wsEventEmitter.emit(String(task.id), messageData.args.auth);
             cw.wsLogger.info(
                 `Succeded agent with id ${task.containerID} in task ${task.id} - ${messageData.args.status}`
             );
