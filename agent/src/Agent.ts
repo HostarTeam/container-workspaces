@@ -31,7 +31,7 @@ export default class Agent {
     constructor(public config: AgentConfiguration) {
         this.configureLogger();
         this.initWebSocket();
-        this.runServices();
+        this.startupServices();
     }
 
     private initWebSocket(isReconnection = false): void {
@@ -111,8 +111,11 @@ export default class Agent {
         );
     }
 
+    private initServices(): void {
+        this.services = { vscode: new VSCode(), webshell: new WebShell() };
+    }
+
     private runServices(): void {
-        this.services.vscode = new VSCode();
         this.services.vscode.setArgs({
             token: generatePassword(64),
             port: 8443,
@@ -120,12 +123,16 @@ export default class Agent {
         });
         this.services.vscode.start();
 
-        this.services.webshell = new WebShell();
         this.services.webshell.setArgs({
             token: generatePassword(64),
             port: 8444,
             host: '0.0.0.0',
         });
         this.services.webshell.start();
+    }
+
+    private startupServices(): void {
+        this.initServices();
+        this.runServices();
     }
 }
