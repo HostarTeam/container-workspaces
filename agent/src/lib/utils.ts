@@ -114,7 +114,7 @@ export function getSocketID(socket: WebSocket) {
     return `${(<any>socket)._socket.remoteAddress}:${
         (<any>socket)._socket.remotePort
     }`;
-    /* eslint-disable */
+    /* eslint-enable */
 }
 
 export function checkIfSocketClosed(socket: WebSocket): boolean {

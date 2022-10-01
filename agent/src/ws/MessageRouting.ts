@@ -5,7 +5,6 @@ import { MessageDataResponse } from '../lib/typing/MessageData';
 import { Task } from '../lib/typing/Task';
 import { execAsync, getLastLines } from '../lib/utils';
 import { ActualExecException, ExecReportError } from '../lib/typing/errors';
-import Ticket from '../lib/typing/Ticket';
 import { chmodSync, mkdtempSync, writeFileSync } from 'fs';
 import { rm } from 'fs/promises';
 
@@ -96,7 +95,7 @@ export default class MessageRouting {
         const password = task.data.args.password;
 
         try {
-            await agent.changePassword(password);
+            agent.changePassword(password);
 
             const clientCommand: MessageDataResponse = new MessageDataResponse({
                 taskid: task.id,
@@ -121,25 +120,42 @@ export default class MessageRouting {
         }
     }
 
-    public static async create_ticket(agent: Agent, task: Task): Promise<void> {
-        const ticket = task.data.args.ticket;
-        agent.tickets.set(ticket.id, new Ticket(ticket));
-    }
-
-    public static async get_vscode_password(
+    public static async get_service_auth_token(
         agent: Agent,
         task: Task
     ): Promise<void> {
-        const clientCommand: MessageDataResponse = new MessageDataResponse({
-            taskid: task.id,
-            action: 'get_vscode_password',
-            args: {
-                status: 'success',
-                password: agent.serviceJournal.get('vscode_token'),
-            },
-        });
+        const serviceName = task.data.args?.service;
+        try {
+            if (!serviceName) throw new Error('No service specified in args');
+            // eslint-disable-next-line no-prototype-builtins
+            if (!agent.services.hasOwnProperty(serviceName))
+                throw new Error(`No such service ${serviceName}`);
 
-        agent.sendData(clientCommand);
+            const service = agent.services[serviceName];
+            const auth = service.getAuth();
+            const clientCommand = new MessageDataResponse({
+                taskid: task.id,
+                action: 'get_service_auth_token',
+                args: { auth, status: 'success' },
+            });
+
+            agent.sendData(clientCommand);
+        } catch (e: unknown) {
+            if (e instanceof Error) {
+                const clientCommand = new MessageDataResponse({
+                    taskid: task.id,
+                    action: 'get_service_auth_token',
+                    args: {
+                        status: 'error',
+                        errorReport: {
+                            message: e.message,
+                            stack: e.stack,
+                        },
+                    },
+                });
+                agent.sendData(clientCommand);
+            }
+        }
     }
 
     public static async shell_exec_sync(
@@ -204,8 +220,6 @@ export default class MessageRouting {
                     `Finished executing script with id: ${task.id}`
                 );
             });
-
-            // TODO: Handle timeout
 
             agent.logger.info(`Executed script with task id: ${task.id}`);
             rm(tmpDir, { recursive: true, force: true }).catch(() => {
