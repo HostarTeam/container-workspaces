@@ -33,7 +33,7 @@ export default class ProxyManager {
     protected readonly config: Configuration['proxy'];
     protected webApp: Application;
     protected accessTokens: Map<string, ProxyInfo>;
-    protected containerProxyClient: Map<number, BaseProxy>;
+    protected containerProxyClient: Map<string, BaseProxy>;
     protected authMiddleware: () => Handler;
     protected proxyRouter: Router;
     protected serviceRedirectRouter: Router;
@@ -162,9 +162,7 @@ export default class ProxyManager {
                 )
                     return socket.destroy();
 
-                let proxyClient = this.containerProxyClient.get(
-                    proxyInfo.containerID
-                );
+                let proxyClient = this.containerProxyClient.get(token);
                 if (!proxyClient) {
                     proxyClient = new this.proxyClients[proxyInfo.service](
                         {
@@ -179,10 +177,7 @@ export default class ProxyManager {
                         await proxyClient.fetchAuth();
                     }
 
-                    this.containerProxyClient.set(
-                        proxyInfo.containerID,
-                        proxyClient
-                    );
+                    this.containerProxyClient.set(token, proxyClient);
                 }
 
                 proxyClient.handleHttpUpgrade(request, socket, head);
