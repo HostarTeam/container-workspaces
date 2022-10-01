@@ -32,7 +32,8 @@ export default async function proxyHandler(
         });
     }
 
-    let proxyClient = this.containerProxyClient.get(proxyInfo.containerID);
+    const token: string = req.cookies['pm-token'];
+    let proxyClient = this.containerProxyClient.get(token);
     if (!proxyClient) {
         proxyClient = new this.proxyClients[proxyInfo.service](
             {
@@ -46,7 +47,7 @@ export default async function proxyHandler(
             await proxyClient.fetchAuth();
         }
 
-        this.containerProxyClient.set(proxyInfo.containerID, proxyClient);
+        this.containerProxyClient.set(token, proxyClient);
     }
 
     proxyClient.handleFetch(req, res);
