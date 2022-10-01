@@ -40,17 +40,9 @@ jobs:
             - name: Generate Prisma client
               run: npm run prisma:generate
             - name: Building project
-              run: npm run build --if-present
-            - name: Setting up daemon CD directory
-              run: |
-                  rm -rf ~/CD/daemon
-                  mkdir -p ~/CD/daemon
-                  cp -r ./dist ~/CD/daemon
-                  cp -r ./node_modules ~/CD/daemon
-                  cp ./package-lock.json ~/CD/daemon
-                  cp ./package.json ~/CD/daemon
+              run: npm run compile --if-present
             - name: Start PM2 process
-              run: sudo pm2 start --name cw-daemon ~/CD/daemon/dist/app.js
+              run: sudo pm2 start --name cw-daemon ./build/usr/bin/cw-daemon
 
     AgentCD:
         name: Agent CD
@@ -75,14 +67,6 @@ jobs:
             - name: Install clean state
               run: npm ci
             - name: Building project
-              run: npm run build --if-present
-            - name: Setting up agent CD directory
-              run: |
-                  rm -rf ~/CD/agent
-                  mkdir -p ~/CD/agent
-                  cp -r ./dist ~/CD/agent
-                  cp -r ./node_modules ~/CD/agent
-                  cp ./package-lock.json ~/CD/agent
-                  cp ./package.json ~/CD/agent
+              run: npm run compile --if-present
             - name: Start PM2 process
-              run: sudo pm2 start --name cw-agent ~/CD/agent/dist/app.js
+              run: sudo pm2 start --name cw-agent ./build/usr/bin/cw-agent
