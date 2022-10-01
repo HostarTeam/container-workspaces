@@ -25,7 +25,6 @@ import {
     Configuration,
     ServerToClientEvents,
     status,
-    Ticket,
 } from './lib/typing/types';
 import {
     checkAuthToken,
@@ -34,11 +33,11 @@ import {
     createLoggers,
     getEncodedBasicToken,
     printSuccess,
-    sleep,
 } from './lib/util/utils';
-import { ClientNotFoundError, sendTaskToAgent } from './lib/ws/commandAgent';
+import { sendTaskToAgent } from './lib/ws/commandAgent';
 import { wsCommand } from './lib/ws/routing/wsCommand';
 import { handleMessage } from './lib/ws/wsMessageHandler';
+import { EventEmitter } from 'events';
 
 export default class ContainerWorkspaces {
     protected httpServer: HttpServer | HttpsServer;
@@ -48,8 +47,6 @@ export default class ContainerWorkspaces {
     public httpLogger: Logger;
     public wsLogger: Logger;
     public pveLogger: Logger;
-    public logLines: Map<Task['id'], string> = new Map();
-    public codeServerPasswords: Map<Task['id'], string> = new Map();
 
     protected setupHttp = setupHttp;
     protected initMainRouter = initMainRouter;
@@ -79,6 +76,7 @@ export default class ContainerWorkspaces {
     protected proxyManager: ProxyManager;
     public io: SocketIOServer<ClientToServerEvents, ServerToClientEvents>;
     public taskToSocketId: Map<Task['id'], SocketIOSocket['id']>;
+    public wsEventEmitter: EventEmitter = new EventEmitter();
 
     constructor(public readonly config: Configuration) {
         this.taskToSocketId = new Map();
@@ -433,14 +431,17 @@ export default class ContainerWorkspaces {
         });
         await this.sendTaskToAgent(task, ip);
 
-        // God please forgive us for this sin we're about to commit
-        for (let i = 0; i < 20; i++) {
-            await sleep(20);
-            const lines = this.logLines.get(task.id);
-            if (lines) return lines;
-        }
-
-        return null;
+        return await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject('Timeout reached'), 5000);
+            this.wsEventEmitter.once(
+                task.id.toString(),
+                (lines: string | null) => {
+                    if (!lines) reject('Got no lines');
+                    clearTimeout(timeout);
+                    resolve(lines);
+                }
+            );
+        });
     }
 
     /**
@@ -450,16 +451,17 @@ export default class ContainerWorkspaces {
      * @async
      * @param {number} containerID
      * @param {string} ip
-     * @returns {Promise<string>}
+     * @returns {Promise<T>}
      */
-    public async getVSCodePassword(
+    public async getServiceAuth<T>(
         containerID: number,
-        ip: string
-    ): Promise<string> {
+        ip: string,
+        service: string
+    ): Promise<T> {
         const data: MessageData = {
-            action: 'get_vscode_password',
+            action: 'get_service_auth_token',
             args: {
-                linesCount: 100,
+                service,
             },
         };
         const task = await this.prismaClient.task.create({
@@ -467,14 +469,14 @@ export default class ContainerWorkspaces {
         });
         await this.sendTaskToAgent(task, ip);
 
-        // God please forgive us for this sin we're about to commit
-        for (let i = 0; i < 10; i++) {
-            await sleep(20);
-            const lines = this.codeServerPasswords.get(task.id);
-            if (lines) return lines;
-        }
-
-        return null;
+        return await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject('Timeout reached'), 5000);
+            this.wsEventEmitter.once(task.id.toString(), (auth: T | null) => {
+                if (!auth) reject('No auth');
+                clearTimeout(timeout);
+                resolve(auth);
+            });
+        });
     }
 
     /**
@@ -701,7 +703,7 @@ export default class ContainerWorkspaces {
      * @async
      * @returns {Promise<void>}
      */
-    private async connectDatabase() {
+    private async connectDatabase(): Promise<void> {
         this.prismaClient = new PrismaClient({
             datasources: {
                 db: {
@@ -711,37 +713,5 @@ export default class ContainerWorkspaces {
         });
         await this.prismaClient.$connect();
         printSuccess('Connected to database');
-    }
-
-    /**
-     * Tell an agent to create a ticket
-     * @protected
-     * @method
-     * @async
-     * @param  {number} containerID
-     * @param  {Ticket} ticket
-     * @returns {Promise<void>}
-     */
-    protected async createTicket(containerID: number, ticket: Ticket) {
-        const agentIP = await this.proxmoxClient.getContainerIP(
-            Number(containerID)
-        );
-        const connection = this.getConnectedClient(agentIP);
-        if (!connection)
-            throw new ClientNotFoundError(
-                `Could not find client with IP ${agentIP}`
-            );
-
-        const data: MessageData = {
-            action: 'create_ticket',
-            args: {
-                ticket,
-            },
-        };
-        const task = await this.prismaClient.task.create({
-            data: { containerID, data: JSON.stringify(data) },
-        });
-
-        await this.sendTaskToAgent(task, agentIP);
     }
 }

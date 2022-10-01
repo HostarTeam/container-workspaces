@@ -17,6 +17,7 @@ import validateProxy, { validateWSProxy } from './common/validateProxyHost';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import BaseProxy from './proxies/BaseProxy';
 import VSCodeProxy from './proxies/vscode';
+import WebShellProxy from './proxies/webshell';
 import { WebSocketServer } from 'ws';
 import { getProxyInfo, parseCookieString } from './common/utils';
 import serviceToPort from './common/serviceToPort';
@@ -39,6 +40,7 @@ export default class ProxyManager {
 
     protected proxyClients = {
         vscode: VSCodeProxy,
+        webshell: WebShellProxy,
     };
 
     protected httpHandler = httpHandler;

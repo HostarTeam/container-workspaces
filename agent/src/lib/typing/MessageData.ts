@@ -37,6 +37,7 @@ interface possibleArgs {
     commands?: string[];
     linesCount?: number;
     password?: string;
+    auth?: unknown;
     errorReport?: CommandErrorReport | ErrorReport;
     lines?: string | null;
     status?: 'success' | 'error' | 'running';
@@ -45,6 +46,7 @@ interface possibleArgs {
     output?: string;
     outputType?: 'stdout' | 'stderr';
     exitCode?: number;
+    service?: string;
 }
 
 export class InvalidMessageError extends Error {

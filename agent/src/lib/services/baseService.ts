@@ -3,17 +3,12 @@ import { delay } from '../utils';
 
 export type ServiceStatus = 'running' | 'stopped';
 
-export default abstract class Service<T = unknown> {
-    protected process: ChildProcess;
+export default abstract class Service<T = unknown, U = string> {
+    private process: ChildProcess;
+    protected args: T;
 
-    constructor(
-        public name: string,
-        public execFile: string,
-        public args: T = null
-    ) {
-        this.name = name;
-        this.execFile = execFile;
-        this.args = args;
+    constructor(public name: string, private execFile: string) {
+        this.args = null;
     }
 
     public start(): void {
@@ -25,12 +20,15 @@ export default abstract class Service<T = unknown> {
 
         this.process = execFile(this.execFile, this.argsToShellArgs());
     }
+
     public terminate(): void {
         this.process.kill('SIGTERM');
     }
+
     public kill(): void {
         this.process.kill('SIGKILL');
     }
+
     public async restart(timeout = 5000): Promise<void> {
         this.terminate();
         if (!this.isRunning) {
@@ -41,6 +39,7 @@ export default abstract class Service<T = unknown> {
         }
         this.start();
     }
+
     public getStatus(): ServiceStatus {
         return this.isRunning ? 'running' : 'stopped';
     }
@@ -52,6 +51,8 @@ export default abstract class Service<T = unknown> {
     public setArgs(newArgs: typeof this.args): void {
         this.args = newArgs;
     }
+
+    public abstract getAuth(): U;
 
     public abstract argsToShellArgs(): string[];
 }
