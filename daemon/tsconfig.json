@@ -1,14 +1,14 @@
 {
     "compilerOptions": {
-        "target": "ES5",
+        "target": "ES2021",
         "rootDir": "src/",
         "outDir": "dist/",
         "importHelpers": false,
         "moduleResolution": "node",
+        "module": "commonjs",
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
         "importsNotUsedAsValues": "remove",
-        "removeComments": true,
-        "lib": ["ES2021.String"]
+        "removeComments": true
     }
 }

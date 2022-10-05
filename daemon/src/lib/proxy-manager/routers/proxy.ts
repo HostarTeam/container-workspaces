@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { Request, Response } from 'express';
-import { ProxyInfo } from '../common/types';
 import ProxyManager from '../ProxyManager';
 
 export function initProxyRouter(this: ProxyManager) {
@@ -15,7 +14,7 @@ export function initProxyRouter(this: ProxyManager) {
         if (!this.accessTokens.has(token))
             return res.status(400).send('invalid token');
 
-        const proxyInfo: ProxyInfo = this.accessTokens.get(token);
+        const { proxyInfo } = this.accessTokens.get(token);
 
         return res
             .status(302)

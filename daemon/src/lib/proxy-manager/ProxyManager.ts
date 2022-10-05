@@ -1,38 +1,32 @@
 import type { Configuration } from '../typing/types';
-import express, { Application, Handler, Router } from 'express';
-import {
-    Server as HttpServer,
-    createServer as createHttpServer,
-    IncomingMessage,
-} from 'http';
-import {
-    Server as HttpsServer,
-    createServer as createHttpsServer,
-} from 'https';
+import type { Application, Handler, Router } from 'express';
+import express from 'express';
+import type { Server as HttpServer, IncomingMessage } from 'http';
+import { createServer as createHttpServer } from 'http';
+import type { Server as HttpsServer } from 'https';
+import { createServer as createHttpsServer } from 'https';
 import { existsSync, readFileSync } from 'fs';
 import { printError, printSuccess } from '../util/utils';
 import proxyHandler from './proxyHandler';
 import httpHandler from './httpHandler';
 import validateProxy, { validateWSProxy } from './common/validateProxyHost';
-import ContainerWorkspaces from '../../ContainerWorkspaces';
+import type ContainerWorkspaces from '../../ContainerWorkspaces';
 import BaseProxy from './proxies/BaseProxy';
 import VSCodeProxy from './proxies/vscode';
 import WebShellProxy from './proxies/webshell';
-import { WebSocketServer } from 'ws';
 import { getProxyInfo, parseCookieString } from './common/utils';
 import serviceToPort from './common/serviceToPort';
-import { Duplex } from 'stream';
-import { ProxyInfo } from './common/types';
+import type { Duplex } from 'stream';
+import type { AccessTokenInfo, ProxyInfo } from './common/types';
 import { initProxyRouter } from './routers/proxy';
 import { initServiceRedirectRouter } from './routers/serviceRedirect';
 import cookieParser from 'cookie-parser';
 
 export default class ProxyManager {
     private httpServer: HttpServer | HttpsServer;
-    private wss: WebSocketServer;
     protected readonly config: Configuration['proxy'];
     protected webApp: Application;
-    protected accessTokens: Map<string, ProxyInfo>;
+    protected accessTokens: Map<string, AccessTokenInfo>;
     protected containerProxyClient: Map<string, BaseProxy>;
     protected authMiddleware: () => Handler;
     protected proxyRouter: Router;
@@ -58,6 +52,7 @@ export default class ProxyManager {
         this.accessTokens = new Map();
         this.containerProxyClient = new Map();
 
+        this.initCheckExpiredTokenInterval();
         this.startWebServer();
     }
 
@@ -154,7 +149,9 @@ export default class ProxyManager {
 
                 if (!this.accessTokens.has(token)) return socket.destroy();
 
-                const { service, containerID } = this.accessTokens.get(token);
+                const {
+                    proxyInfo: { service, containerID },
+                } = this.accessTokens.get(token);
 
                 if (
                     service !== proxyInfo.service ||
@@ -185,8 +182,22 @@ export default class ProxyManager {
         );
     }
 
+    private initCheckExpiredTokenInterval(): void {
+        setInterval(() => {
+            const now = Date.now();
+            for (const [token, { expires }] of this.accessTokens) {
+                if (now > expires) {
+                    this.accessTokens.delete(token);
+                    this.containerProxyClient.delete(token);
+                }
+            }
+        }, 1000 * 60);
+    }
+
     /**
      * Method will add a container to the service proxy manager.
+     * @public
+     * @method
      * @param {string} containerID - The container ID to proxy to.
      * @param {string} containerIP - The container IP to proxy to.
      */
@@ -205,10 +216,32 @@ export default class ProxyManager {
         throw new Error('Method not implemented.');
     }
 
-    public addContainerAccess(proxyInfo: ProxyInfo, token: string): void {
-        this.accessTokens.set(token, proxyInfo);
+    /**
+     * Method will add a token to the service proxy manager.
+     * @public
+     * @method
+     * @param {ProxyInfo} proxyInfo - The proxy info to add.
+     * @param {string} token - The token to add.
+     * @param {number} duration - The time in seconds the token should expire in.
+     */
+    public addContainerAccess(
+        proxyInfo: ProxyInfo,
+        token: string,
+        duration: number
+    ): void {
+        const accessTokenInfo: AccessTokenInfo = {
+            proxyInfo,
+            expires: Date.now() + duration,
+        };
+        this.accessTokens.set(token, accessTokenInfo);
     }
 
+    /**
+     * Method will remove a token from the service proxy manager.
+     * @public
+     * @method
+     * @param {string} token - The token to remove.
+     */
     public removeContainerAccess(token: string): void {
         this.accessTokens.delete(token);
     }
