@@ -1,9 +1,18 @@
-import { AgentConfiguration, CommandErrorReport } from './lib/typing/types';
-import { exec, ExecException } from 'child_process';
+import type {
+    AgentConfiguration,
+    CommandErrorReport,
+    Services,
+} from './lib/typing/types';
+import type { ExecException } from 'child_process';
+import { exec } from 'child_process';
 import { mkdirSync, writeFileSync } from 'fs';
 import fetch, { Response } from 'node-fetch';
 import log4js, { Logger } from 'log4js';
-import { changeSystemHostname, getInfoFromHostname } from './lib/utils';
+import {
+    changeSystemHostname,
+    getInfoFromHostname,
+    printSuccess,
+} from './lib/utils';
 
 export default class InitAgent {
     private readonly address: string;
@@ -13,7 +22,7 @@ export default class InitAgent {
     protected logger: Logger;
     protected config: AgentConfiguration;
 
-    constructor() {
+    constructor(private services: Services) {
         const { protocol, address, httpPort, wsPort } = getInfoFromHostname();
         this.protocol = protocol;
         this.address = address;
@@ -48,6 +57,8 @@ export default class InitAgent {
         this.logger.info('Executed init commands');
 
         await this.initHostname();
+
+        this.installServices();
 
         await this.setAsRan();
     }
@@ -148,6 +159,15 @@ export default class InitAgent {
                 'Deamon did not respond to inithostname, so could not set hostname, full error:',
                 err
             );
+        }
+    }
+
+    private installServices(): void {
+        printSuccess('Installing services');
+        for (const serviceKey in this.services) {
+            const service = this.services[serviceKey];
+            printSuccess(`Installing ${service.name} service`);
+            service.installService();
         }
     }
 }

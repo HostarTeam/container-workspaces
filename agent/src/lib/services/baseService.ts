@@ -55,4 +55,6 @@ export default abstract class Service<T = unknown, U = string> {
     public abstract getAuth(): U;
 
     public abstract argsToShellArgs(): string[];
+
+    public abstract installService(): void;
 }
