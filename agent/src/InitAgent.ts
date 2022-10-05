@@ -1,9 +1,10 @@
-import {
+import type {
     AgentConfiguration,
     CommandErrorReport,
     Services,
 } from './lib/typing/types';
-import { exec, ExecException } from 'child_process';
+import type { ExecException } from 'child_process';
+import { exec } from 'child_process';
 import { mkdirSync, writeFileSync } from 'fs';
 import fetch, { Response } from 'node-fetch';
 import log4js, { Logger } from 'log4js';
