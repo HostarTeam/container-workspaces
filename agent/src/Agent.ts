@@ -1,4 +1,4 @@
-import { AgentConfiguration } from './lib/typing/types';
+import { AgentConfiguration, Services } from './lib/typing/types';
 import { RawData, WebSocket } from 'ws';
 import { generatePassword, printSuccess } from './lib/utils';
 import log4js, { Logger } from 'log4js';
@@ -8,14 +8,6 @@ import { Task } from './lib/typing/Task';
 import passwd from 'passwd-linux';
 import { MessageDataResponse } from './lib/typing/MessageData';
 import Ticket from './lib/typing/Ticket';
-import VSCode from './lib/services/vscode';
-import WebShell from './lib/services/webshell';
-import Service from './lib/services/baseService';
-
-interface Services extends Record<string, Service> {
-    vscode: VSCode;
-    webshell: WebShell;
-}
 
 export default class Agent {
     public ws: WebSocket;
@@ -26,12 +18,10 @@ export default class Agent {
     protected handleMessage: (message: RawData) => void = handleMessage;
     protected wsCommand: (commandData: Task) => void = wsCommand;
 
-    public services: Services;
-
-    constructor(public config: AgentConfiguration) {
+    constructor(public config: AgentConfiguration, public services: Services) {
         this.configureLogger();
         this.initWebSocket();
-        this.startupServices();
+        this.runServices();
     }
 
     private initWebSocket(isReconnection = false): void {
@@ -111,10 +101,6 @@ export default class Agent {
         );
     }
 
-    private initServices(): void {
-        this.services = { vscode: new VSCode(), webshell: new WebShell() };
-    }
-
     private runServices(): void {
         this.services.vscode.setArgs({
             token: generatePassword(64),
@@ -129,10 +115,5 @@ export default class Agent {
             host: '0.0.0.0',
         });
         this.services.webshell.start();
-    }
-
-    private startupServices(): void {
-        this.initServices();
-        this.runServices();
     }
 }
