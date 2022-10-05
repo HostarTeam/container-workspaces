@@ -462,6 +462,15 @@ export async function createContainerByLocation(
     const config = await this.cw.getConfig();
 
     const node = await this.getNodeByLocation(location);
+    if (!node) {
+        this.pveLogger.error(
+            `Could not find free node for location with id ${location}`
+        );
+        return {
+            error: "Could not find free node (can be caused because all nodes are full, or because there aren't available ip addresses)",
+            ok: false,
+        };
+    }
     const sqlNode = await this.prismaClient.node.findFirst({
         where: {
             nodename: node,
@@ -469,10 +478,6 @@ export async function createContainerByLocation(
     });
     const options = config['ct_options'];
     const ip = await this.getFreeIP(sqlNode.id);
-    if (!ip) {
-        this.pveLogger.error(`Could not find free ip while creating container`);
-        return { error: 'Could not find free IP', ok: false };
-    }
     const res = await this.createContainerInProxmox({
         options,
         node,
@@ -712,15 +717,15 @@ export function scoreNode(this: ProxmoxConnection, node: Node): number {
 /**
  * Get the first fine node in a given location
  * @async
- * @param  {string} location
- * @returns {Promise<string>}
+ * @param  {number} locationID
+ * @returns {Promise<string | null>}
  */
 export async function getNodeByLocation(
     this: ProxmoxConnection,
     locationID: Location['id']
-): Promise<string> {
+): Promise<string | null> {
     const nodes = await this.prismaClient.node.findMany({
-        where: { location: { id: locationID } },
+        where: { location: { id: locationID }, ips: { some: { used: false } } },
     });
 
     return await this.getFirstFineNode(nodes);
