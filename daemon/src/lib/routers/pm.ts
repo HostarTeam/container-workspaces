@@ -17,9 +17,11 @@ export function initPMRouter(this: ContainerWorkspaces) {
             const {
                 containerID,
                 service,
+                duration = 4 * 60 * 60 * 1000, // 4 hours
             }: {
                 containerID: string;
                 service: keyof typeof serviceToPort;
+                duration?: string | number;
             } = req.body;
 
             const containerIDNumber = parseInt(containerID);
@@ -40,6 +42,18 @@ export function initPMRouter(this: ContainerWorkspaces) {
                     message: 'service must be an existing service',
                 });
 
+            const durationNumber = Number(duration);
+            if (isNaN(durationNumber))
+                return res.status(400).send({
+                    status: 'error',
+                    message: 'duration must be a valid number',
+                });
+            else if (durationNumber > 24 * 60 * 60 * 1000)
+                return res.status(400).send({
+                    status: 'error',
+                    message: 'duration must be less than 24 hours',
+                });
+
             const token: string = generatePassword(64);
 
             const proxyInfo: ProxyInfo = {
@@ -47,7 +61,7 @@ export function initPMRouter(this: ContainerWorkspaces) {
                 service,
             };
 
-            pm.addContainerAccess(proxyInfo, token);
+            pm.addContainerAccess(proxyInfo, token, durationNumber);
 
             res.send({ status: 'ok', token });
         }

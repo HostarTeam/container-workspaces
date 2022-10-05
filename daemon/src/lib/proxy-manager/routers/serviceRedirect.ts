@@ -1,8 +1,7 @@
 import { NextFunction, Router } from 'express';
 import { Request, Response } from 'express';
-import { ProxyInfo } from '../common/types';
 import { getProxyInfo } from '../common/utils';
-import ProxyManager from '../ProxyManager';
+import type ProxyManager from '../ProxyManager';
 
 export function initServiceRedirectRouter(this: ProxyManager): void {
     this.serviceRedirectRouter = Router();
@@ -16,7 +15,7 @@ export function initServiceRedirectRouter(this: ProxyManager): void {
         if (!this.accessTokens.has(token))
             return res.status(401).send('invalid token');
 
-        const proxyInfo: ProxyInfo = this.accessTokens.get(token);
+        const { proxyInfo } = this.accessTokens.get(token);
 
         const { service, containerID } = getProxyInfo(req.hostname);
         if (
@@ -41,7 +40,7 @@ export function initServiceRedirectRouter(this: ProxyManager): void {
         if (!this.accessTokens.has(token))
             return res.status(401).send('unauthorized');
 
-        const proxyInfo: ProxyInfo = this.accessTokens.get(token);
+        const { proxyInfo } = this.accessTokens.get(token);
 
         const { service, containerID } = getProxyInfo(req.hostname);
         if (
