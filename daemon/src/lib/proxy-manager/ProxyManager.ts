@@ -17,6 +17,8 @@ import validateProxy, { validateWSProxy } from './common/validateProxyHost';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import BaseProxy from './proxies/BaseProxy';
 import VSCodeProxy from './proxies/vscode';
+import WebShellProxy from './proxies/webshell';
+import { WebSocketServer } from 'ws';
 import { getProxyInfo, parseCookieString } from './common/utils';
 import serviceToPort from './common/serviceToPort';
 import { Duplex } from 'stream';
@@ -30,13 +32,14 @@ export default class ProxyManager {
     protected readonly config: Configuration['proxy'];
     protected webApp: Application;
     protected accessTokens: Map<string, ProxyInfo>;
-    protected containerProxyClient: Map<number, BaseProxy>;
+    protected containerProxyClient: Map<string, BaseProxy>;
     protected authMiddleware: () => Handler;
     protected proxyRouter: Router;
     protected serviceRedirectRouter: Router;
 
     protected proxyClients = {
         vscode: VSCodeProxy,
+        webshell: WebShellProxy,
     };
 
     protected httpHandler = httpHandler;
@@ -158,9 +161,7 @@ export default class ProxyManager {
                 )
                     return socket.destroy();
 
-                let proxyClient = this.containerProxyClient.get(
-                    proxyInfo.containerID
-                );
+                let proxyClient = this.containerProxyClient.get(token);
                 if (!proxyClient) {
                     proxyClient = new this.proxyClients[proxyInfo.service](
                         {
@@ -175,10 +176,7 @@ export default class ProxyManager {
                         await proxyClient.fetchAuth();
                     }
 
-                    this.containerProxyClient.set(
-                        proxyInfo.containerID,
-                        proxyClient
-                    );
+                    this.containerProxyClient.set(token, proxyClient);
                 }
 
                 proxyClient.handleHttpUpgrade(request, socket, head);

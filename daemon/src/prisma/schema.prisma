@@ -1,0 +1,74 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  client_id     String @id
+  client_secret String
+
+  @@map("clients")
+}
+
+model Config {
+  id     Int  @id @default(autoincrement())
+  config Json
+
+  @@map("config")
+}
+
+model Container {
+  id    Int     @id
+  ipv4  String
+  ready Boolean @default(false)
+
+  @@map("cts")
+}
+
+model Ip {
+  id      Int     @id @default(autoincrement())
+  ipv4    String  @unique
+  gateway String
+  netmask String
+  used    Boolean
+  nodes   Node[]
+
+  @@map("ips")
+}
+
+model Location {
+  id       Int    @id @default(autoincrement())
+  location String
+  node     Node[]
+
+  @@map("locations")
+}
+
+model Node {
+  id         Int      @id @default(autoincrement())
+  nodename   String   @unique
+  is_main    Boolean
+  ip         String
+  location   Location @relation(fields: [locationId], references: [id])
+  ips        Ip[]
+  locationId Int
+
+  @@map("nodes")
+}
+
+model Task {
+  id          Int       @id @default(autoincrement())
+  containerID Int
+  start_time  DateTime  @default(now())
+  end_time    DateTime?
+  data        Json?
+  status      String?
+  error       String?
+
+  @@map("tasks")
+}

@@ -1,7 +1,7 @@
 import { MessageDataResponse } from '../typing/MessageData';
 
 export class Task {
-    public id: string;
+    public id: number;
     public ipaddr: string;
     public start_time: Date;
     public end_time?: Date | null;
@@ -28,7 +28,7 @@ export class Task {
         this.end_time = end_time;
 
         if (typeof data === 'string')
-            data = new MessageDataResponse(JSON.parse(data));
+            data = new MessageDataResponse(JSON.parse(data), id);
         this.data = data;
 
         this.status = status;
@@ -37,7 +37,7 @@ export class Task {
 }
 
 interface TaskOptions {
-    id?: string;
+    id?: number;
     ipaddr: string;
     start_time?: Date | number;
     end_time?: Date | number;

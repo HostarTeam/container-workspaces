@@ -24,3 +24,9 @@ export interface VSCodeConfiguration {
     port: number;
     host: string;
 }
+
+export interface WebShellConfiguration {
+    token: string;
+    port: number;
+    host: string;
+}

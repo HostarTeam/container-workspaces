@@ -1,17 +1,17 @@
-import { VSCodeConfiguration } from '../typing/types';
+import { WebShellConfiguration } from '../typing/types';
 import Service from './baseService';
 
-export default class VSCode extends Service<
-    VSCodeConfiguration,
-    VSCodeConfiguration['token']
+export default class WebShell extends Service<
+    WebShellConfiguration,
+    WebShellConfiguration['token']
 > {
     constructor() {
-        super('vscode', 'openvscode-server');
+        super('webshell', 'cw-webshell');
     }
 
     argsToShellArgs() {
         return [
-            '--connection-token',
+            '--token',
             this.args.token,
             '--port',
             String(this.args.port),

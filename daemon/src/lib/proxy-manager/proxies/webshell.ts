@@ -6,7 +6,7 @@ import { Duplex } from 'stream';
 import ProxyManager from '../ProxyManager';
 import BaseProxy, { ProxyOptions } from './BaseProxy';
 
-export default class VSCodeProxy extends BaseProxy<ProxyOptions, string> {
+export default class WebShellProxy extends BaseProxy<ProxyOptions, string> {
     public authRequired = true;
     constructor(config: ProxyOptions, pm: ProxyManager) {
         super(config, pm);
@@ -22,7 +22,7 @@ export default class VSCodeProxy extends BaseProxy<ProxyOptions, string> {
                         ...Object(req.headers),
                         accept: '*/*',
                         'upgrade-insecure-requests': '1',
-                        cookie: `vscode-tkn=${this.auth}`,
+                        authorization: `bearer ${this.auth}`,
                         host: `${req.agentIP}:${this.config.port}`,
                     },
                     method: req.method,
@@ -43,7 +43,7 @@ export default class VSCodeProxy extends BaseProxy<ProxyOptions, string> {
             if (err instanceof Error && !res.headersSent) {
                 res.status(500).send({
                     status: 'error',
-                    message: `Error occurred while proxying request to VSCode server - ${err.message}`,
+                    message: `Error occurred while proxying request to WebShell server - ${err.message}`,
                 });
             }
         }
@@ -53,7 +53,7 @@ export default class VSCodeProxy extends BaseProxy<ProxyOptions, string> {
         this.auth = await this.pm.cw.getServiceAuth<string>(
             this.config.containerID,
             this.config.host,
-            'vscode'
+            'webshell'
         );
     }
 
@@ -65,7 +65,7 @@ export default class VSCodeProxy extends BaseProxy<ProxyOptions, string> {
         const proxy = createProxy({
             target: `ws://${this.config.host}:${this.config.port}${request.url}`,
             headers: {
-                Cookie: `vscode-tkn=${this.auth}`,
+                authorization: `bearer ${this.auth}`,
             },
         });
 

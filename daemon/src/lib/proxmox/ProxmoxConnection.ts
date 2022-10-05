@@ -1,4 +1,4 @@
-import { MySQLClient } from '@hostarteam/mysqlclient';
+import { PrismaClient } from '@prisma/client';
 import { Agent } from 'https';
 import { Logger } from 'log4js';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
@@ -12,7 +12,8 @@ import {
     changeContainerStatus,
     changeCTHostname,
     createBackup,
-    createContainer,
+    createContainerByLocation,
+    createContainerByNode,
     createContainerInProxmox,
     deleteBackup,
     deleteContainer,
@@ -51,8 +52,9 @@ import {
     restoreBackup,
     returnNodeIfFine,
     scoreNode,
-    getLocationByID,
+    getLocation,
     addLocation,
+    deleteLocation,
     setCTAsReady,
     updateIPUsedStatus,
 } from './apiTools';
@@ -65,7 +67,7 @@ export default class ProxmoxConnection {
     protected port: number;
     protected basicURL: string;
     protected pveLogger: Logger;
-    protected mySQLClient: MySQLClient;
+    protected prismaClient: PrismaClient;
     protected cw: ContainerWorkspaces;
     protected httpsAgent: Agent | undefined;
     protected verifyCertificate: boolean;
@@ -76,7 +78,8 @@ export default class ProxmoxConnection {
     protected call = call;
     public getNodes = getNodes;
     public getNodesName = getNodesName;
-    public createContainer = createContainer;
+    public createContainerByLocation = createContainerByLocation;
+    public createContainerByNode = createContainerByNode;
     public getNodeIP = getNodeIP;
     public getNodeByLocation = getNodeByLocation;
     protected createContainerInProxmox = createContainerInProxmox;
@@ -91,7 +94,7 @@ export default class ProxmoxConnection {
     protected getStorageNames = getStorageNames;
     protected getStorageOfBackup = getStorageOfBackup;
     protected getResources = getResources;
-    protected getLocationByID = getLocationByID;
+    public getLocation = getLocation;
     public getContainerIP = getContainerIP;
     public getNodeOfContainer = getNodeOfContainer;
     public getContainerInfo = getContainerInfo;
@@ -105,6 +108,7 @@ export default class ProxmoxConnection {
     public getLocations = getLocations;
     public locationExists = locationExists;
     public addLocation = addLocation;
+    public deleteLocation = deleteLocation;
     public getAvailableLocations = getAvailableLocations;
     public getSQLNode = getSQLNode;
     public getIP = getIP;
@@ -131,7 +135,7 @@ export default class ProxmoxConnection {
         password,
         port = 8006,
         pveLogger,
-        mySQLClient,
+        prismaClient,
         cw,
         verifyCertificate = true,
     }: {
@@ -141,7 +145,7 @@ export default class ProxmoxConnection {
         password: string;
         port?: number;
         pveLogger: Logger;
-        mySQLClient: MySQLClient;
+        prismaClient: PrismaClient;
         cw: ContainerWorkspaces;
         verifyCertificate: boolean;
     }) {
@@ -152,7 +156,7 @@ export default class ProxmoxConnection {
         this.password = password;
         this.port = port;
         this.pveLogger = pveLogger;
-        this.mySQLClient = mySQLClient;
+        this.prismaClient = prismaClient;
         this.verifyCertificate = verifyCertificate;
 
         this.intialize();

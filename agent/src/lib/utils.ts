@@ -68,13 +68,15 @@ export function getLastLines(logFilePath: string, lines = 100): string {
 export function getInfoFromHostname(): {
     protocol: string;
     address: string;
-    port: number;
+    httpPort: number;
+    wsPort: number;
 } {
     const hostname: string = os.hostname();
     const protocol = hostname.split('491500')[0];
     const address = hostname.split('491500')[1];
-    const port = Number(hostname.split('491500')[2]);
-    return { protocol, address, port };
+    const httpPort = Number(hostname.split('491500')[2]);
+    const wsPort = Number(hostname.split('491500')[3]);
+    return { protocol, address, httpPort, wsPort };
 }
 
 export function changeSystemHostname(newHostname: string): void {
@@ -112,7 +114,7 @@ export function getSocketID(socket: WebSocket) {
     return `${(<any>socket)._socket.remoteAddress}:${
         (<any>socket)._socket.remotePort
     }`;
-    /* eslint-disable */
+    /* eslint-enable */
 }
 
 export function checkIfSocketClosed(socket: WebSocket): boolean {

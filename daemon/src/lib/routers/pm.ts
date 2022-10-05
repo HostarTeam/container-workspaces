@@ -53,7 +53,7 @@ export function initPMRouter(this: ContainerWorkspaces) {
         }
     );
 
-    router.delete(
+    router.post(
         '/removecontaineraccess',
         requireBodyProps('token'),
         (req: Request, res: Response) => {

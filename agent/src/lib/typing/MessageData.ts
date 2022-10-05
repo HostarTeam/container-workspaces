@@ -20,11 +20,12 @@ export class MessageData {
 }
 
 export class MessageDataResponse extends MessageData {
-    public taskid: string;
+    public taskid: number;
 
-    constructor(props: MessageDataResponse) {
+    constructor(props: MessageDataResponse, taskid?: number) {
         super(props);
-        if (props.taskid) this.taskid = props.taskid;
+        if (taskid) this.taskid = taskid;
+        else if (props.taskid) this.taskid = props.taskid;
         else
             throw new InvalidMessageError(
                 "Proroperty 'taskid' is missing from message"
@@ -36,6 +37,7 @@ interface possibleArgs {
     commands?: string[];
     linesCount?: number;
     password?: string;
+    auth?: unknown;
     errorReport?: CommandErrorReport | ErrorReport;
     lines?: string | null;
     status?: 'success' | 'error' | 'running';
@@ -44,6 +46,7 @@ interface possibleArgs {
     output?: string;
     outputType?: 'stdout' | 'stderr';
     exitCode?: number;
+    service?: string;
 }
 
 export class InvalidMessageError extends Error {

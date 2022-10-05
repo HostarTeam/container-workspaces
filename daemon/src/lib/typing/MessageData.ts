@@ -30,7 +30,7 @@ export class MessageData {
  * @classdesc This class is used to define the data field in a task received from an agent
  */
 export class MessageDataResponse extends MessageData {
-    public taskid: string;
+    public taskid: number;
 
     constructor(props: MessageDataResponse) {
         super(props);
@@ -50,6 +50,7 @@ interface possibleArgs {
     commands?: string[];
     linesCount?: number;
     password?: string;
+    auth?: unknown;
     errorReport?: CommandError;
     lines?: string | null;
     status?: 'success' | 'error' | 'running';
@@ -58,6 +59,7 @@ interface possibleArgs {
     output?: string;
     outputType?: 'stdout' | 'stderr';
     exitCode?: number;
+    service?: string;
 }
 
 /**

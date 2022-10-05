@@ -2,9 +2,7 @@ import { Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { requireBodyProps } from '../util/utils';
 import { CTHardwareOptions } from '../typing/options';
-import SQLIP from '../entities/SQLIP';
-import SQLNode from '../entities/SQLNode';
-import Location from '../entities/Location';
+import { Location, Node as SQLNode, Ip as IP } from '@prisma/client';
 
 export function initConfigRouter(this: ContainerWorkspaces): void {
     this.configRouter = Router();
@@ -38,14 +36,12 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
                 });
             } else {
                 const nodeIP = await this.proxmoxClient.getNodeIP(nodename);
-                await this.proxmoxClient.addNodeToDatabase(
-                    new SQLNode({
-                        nodename,
-                        is_main,
-                        ip: nodeIP,
-                        location,
-                    })
-                );
+                await this.proxmoxClient.addNodeToDatabase({
+                    nodename,
+                    is_main,
+                    ip: nodeIP,
+                    locationId: location,
+                });
                 res.status(201).send({
                     status: 'created',
                     message: 'Node added successfully',
@@ -117,6 +113,72 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
     );
 
     /**
+     * This route is used in order to delete a location from the database.
+     * @param {number} id The location to add in req.body.
+     */
+    router.delete('/locations/:id', async (req: Request, res: Response) => {
+        const id = Number(req.params.id);
+
+        if (!id) {
+            return res.status(400).send({
+                status: 'bad request',
+                message: 'No location ID specified',
+            });
+        }
+
+        if (!Number.isInteger(id)) {
+            return res.status(400).send({
+                status: 'bad request',
+                message: 'Location ID must be an integer',
+            });
+        }
+
+        const location = await this.proxmoxClient.getLocation(id);
+        if (!location)
+            return res.status(404).send({
+                status: 'not found',
+                message: 'Location does not exist',
+            });
+
+        await this.proxmoxClient.deleteLocation(id);
+
+        res.send({
+            message: 'Location deleted successfully',
+        });
+    });
+
+    /**
+     * This route is used in order to delete a location from the database.
+     * @param {number} id The location to add in req.body.
+     */
+    router.get('/locations/:id', async (req: Request, res: Response) => {
+        const id = Number(req.params.id);
+
+        if (!id) {
+            return res.status(400).send({
+                status: 'bad request',
+                message: 'No location ID specified',
+            });
+        }
+
+        if (!Number.isInteger(id)) {
+            return res.status(400).send({
+                status: 'bad request',
+                message: 'Location ID must be an integer',
+            });
+        }
+
+        const location = await this.proxmoxClient.getLocation(id);
+        if (!location)
+            return res.status(404).send({
+                status: 'not found',
+                message: 'Location does not exist',
+            });
+
+        res.send(location);
+    });
+
+    /**
      * This route is used in order to get all available locations.
      */
     router.get('/locations/available', async (req: Request, res: Response) => {
@@ -129,7 +191,7 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
      * This route is used in order to get all available ip addresses.
      */
     router.get('/ips', async (req: Request, res: Response) => {
-        const ips: SQLIP[] = await this.proxmoxClient.getIPs();
+        const ips: IP[] = await this.proxmoxClient.getIPs();
 
         res.send(ips);
     });
@@ -148,21 +210,19 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
             const gateway = String(req.body.gateway);
             const netmask = String(req.body.netmask);
 
-            const ip: SQLIP = await this.proxmoxClient.getIP(ipv4);
+            const ip: IP = await this.proxmoxClient.getIP(ipv4);
             if (ip) {
                 res.status(409).send({
                     status: 'conflict',
                     message: 'IP already exists in the database',
                 });
             } else {
-                await this.proxmoxClient.addIPToDatabase(
-                    new SQLIP({
-                        ipv4,
-                        gateway,
-                        netmask,
-                        used: false,
-                    })
-                );
+                await this.proxmoxClient.addIPToDatabase({
+                    ipv4,
+                    gateway,
+                    netmask,
+                    used: false,
+                });
                 res.status(201).send({
                     status: 'created',
                     message: 'IP added successfully',
@@ -185,9 +245,9 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
             const gateway = String(req.body.gateway);
             const netmask = String(req.body.netmask);
 
-            const ips: SQLIP['ipv4'][] = (
-                await this.proxmoxClient.getIPs()
-            ).map((ip) => ip.ipv4);
+            const ips: IP['ipv4'][] = (await this.proxmoxClient.getIPs()).map(
+                (ip) => ip.ipv4
+            );
 
             const ipv4sToAdd: string[] = ipv4s.filter(
                 (ipv4) => !ips.includes(ipv4)
@@ -201,14 +261,12 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
                 });
             } else {
                 for (const ipv4 of ipv4sToAdd) {
-                    await this.proxmoxClient.addIPToDatabase(
-                        new SQLIP({
-                            ipv4,
-                            gateway,
-                            netmask,
-                            used: false,
-                        })
-                    );
+                    await this.proxmoxClient.addIPToDatabase({
+                        ipv4,
+                        gateway,
+                        netmask,
+                        used: false,
+                    });
                 }
                 res.status(201).send({
                     status: 'created',
@@ -225,7 +283,7 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
     router.delete('/ips/:ipv4', async (req: Request, res: Response) => {
         const ipv4 = String(req.params.ipv4);
 
-        const ip: SQLIP = await this.proxmoxClient.getIP(ipv4);
+        const ip: IP = await this.proxmoxClient.getIP(ipv4);
         if (!ip) {
             res.status(404).send({
                 status: 'not found',

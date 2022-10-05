@@ -1,0 +1,72 @@
+name: Stage CD
+
+on:
+    push:
+        branches: ['master']
+
+jobs:
+    InitPM2:
+        name: Initialize PM2 Daemon
+        runs-on: [self-hosted, stg-deployment]
+        steps:
+            - name: Delete all pm2 processes
+              run: sudo pm2 delete all
+              continue-on-error: true
+            - name: Validate there is a pm2 daemon running
+              run: sudo pm2 list
+
+    DaemonCD:
+        name: Daemon CD
+        needs: InitPM2
+        runs-on: [self-hosted, stg-deployment]
+        defaults:
+            run:
+                working-directory: ./daemon
+
+        strategy:
+            matrix:
+                node-version: [16.x]
+
+        steps:
+            - uses: actions/checkout@v3
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v3
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: 'npm'
+                  cache-dependency-path: ./daemon/package-lock.json
+            - name: Install clean state
+              run: npm ci
+            - name: Generate Prisma client
+              run: npm run prisma:generate
+            - name: Building project
+              run: npm run compile --if-present
+            - name: Start PM2 process
+              run: sudo pm2 start --name cw-daemon ./build/usr/bin/cw-daemon
+
+    AgentCD:
+        name: Agent CD
+        needs: [DaemonCD]
+        runs-on: [self-hosted, stg-deployment]
+        defaults:
+            run:
+                working-directory: ./agent
+
+        strategy:
+            matrix:
+                node-version: [16.x]
+
+        steps:
+            - uses: actions/checkout@v3
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v3
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: 'npm'
+                  cache-dependency-path: ./agent/package-lock.json
+            - name: Install clean state
+              run: npm ci
+            - name: Building project
+              run: npm run compile --if-present
+            - name: Start PM2 process
+              run: sudo pm2 start --name cw-agent ./build/usr/bin/cw-agent

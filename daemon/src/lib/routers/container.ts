@@ -1,9 +1,8 @@
 import { Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
-import Task from '../entities/Task';
 import { MessageData } from '../typing/MessageData';
-import { ActionResult, ContainerStatus, LXC, Ticket } from '../typing/types';
-import { requireBodyProps, validatePassword, generateID } from '../util/utils';
+import { ActionResult, ContainerStatus, LXC } from '../typing/types';
+import { requireBodyProps, validatePassword } from '../util/utils';
 import { ClientNotFoundError } from '../ws/commandAgent';
 
 export function initContainerRouter(this: ContainerWorkspaces): void {
@@ -79,8 +78,12 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
             };
 
             const agentIP: string = req.agentIP;
-
-            const task: Task = new Task({ data, containerID });
+            const task = await this.prismaClient.task.create({
+                data: {
+                    containerID,
+                    data: JSON.stringify(data),
+                },
+            });
 
             try {
                 await this.sendTaskToAgent(task, agentIP);
@@ -298,39 +301,6 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
 
     /**
      * @param {string} containerID
-     * This route is used in order to get the password from openvscode-server.
-     */
-    router.get(
-        '/:containerID/vscode/password',
-        this.getContainerIP(),
-        async (req: Request, res: Response) => {
-            const containerID = Number(req.params.containerID);
-
-            const connectedAgent = this.getConnectedClient(req.agentIP);
-
-            if (!connectedAgent) {
-                res.status(409).send({
-                    status: 'conflict',
-                    message:
-                        'Container with given ID is not connected to this server',
-                });
-            } else {
-                const password = await this.getVSCodePassword(
-                    containerID,
-                    req.agentIP
-                );
-                if (password) res.send({ status: 'ok', password });
-                else
-                    res.status(409).send({
-                        status: 'conflict',
-                        message: 'could not get password from agent',
-                    });
-            }
-        }
-    );
-
-    /**
-     * @param {string} containerID
      * @param {string} password The new password of the container in req.body.
      * This route is used in order to change the password of a container.
      */
@@ -401,11 +371,35 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      */
     router.post(
         '/',
-        requireBodyProps('location', 'template', 'password'),
+        requireBodyProps('template', 'password'),
         async (req: Request, res: Response) => {
-            const location = String(req.body.location);
             const template = String(req.body.template);
             const password = String(req.body.password);
+            let location: number | null = null;
+            let node: number | null = null;
+
+            if (req.body.location) {
+                if (Number.isInteger(req.body.location))
+                    location = Number(req.body.location);
+                else if (!req.body.node)
+                    return res.status(400).send({
+                        status: 'error',
+                        message: 'location must be an integer',
+                    });
+            } else if (req.body.node) {
+                if (!Number.isInteger(req.body.node))
+                    return res.status(400).send({
+                        status: 'error',
+                        message: 'node must be an integer',
+                    });
+                node = Number(req.body.node);
+            }
+
+            if (!node && !location)
+                return res.status(400).send({
+                    status: 'error',
+                    message: 'location or node must be specified',
+                });
 
             const passwordValid: boolean = validatePassword(password);
             if (!passwordValid) {
@@ -416,11 +410,20 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
                 });
             }
 
-            const created = await this.proxmoxClient.createContainer({
-                location,
-                template,
-                password,
-            });
+            let created: ActionResult<{ ip: string; id: number }>;
+
+            if (location)
+                created = await this.proxmoxClient.createContainerByLocation({
+                    location,
+                    template,
+                    password,
+                });
+            else
+                created = await this.proxmoxClient.createContainerByNode({
+                    node,
+                    template,
+                    password,
+                });
 
             if (created.ok)
                 res.status(201).send({
@@ -433,49 +436,6 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
                     message: 'could not create container',
                     error: created.error,
                 });
-        }
-    );
-
-    router.post(
-        '/:containerID/ticket',
-        this.getContainerIP(),
-        async (req: Request, res: Response) => {
-            const containerID = Number(req.params.containerID);
-
-            if (!this.getConnectedClient(req.agentIP))
-                return res.status(409).send({
-                    status: 'conflict',
-                    message:
-                        'Container with given ID is not connected to this server',
-                });
-
-            const ticketID = generateID();
-            const ticket: Ticket = {
-                id: ticketID,
-                expires: Date.now() + 1000 * 60 * 60 * 4, // 4 Hours
-            };
-
-            try {
-                await this.createTicket(containerID, ticket);
-                res.status(201).send({
-                    status: 'ok',
-                    ticket,
-                });
-            } catch (err: unknown) {
-                if (err instanceof ClientNotFoundError) {
-                    return res.status(409).send({
-                        status: 'conflict',
-                        message:
-                            'Container with given ID is not connected to this server',
-                    });
-                } else {
-                    return res.status(500).send({
-                        status: 'error',
-                        message: 'Could not create ticket',
-                        error: 'Unknown error',
-                    });
-                }
-            }
         }
     );
 }

@@ -1,4 +1,4 @@
-import { ConnectionOptions, MySQLClient } from '@hostarteam/mysqlclient';
+import { PrismaClient, Task } from '@prisma/client';
 import { Application, Handler, Request, Response, Router } from 'express';
 import { Server as HttpServer } from 'http';
 import { createProxyServer } from 'http-proxy';
@@ -8,8 +8,6 @@ import { parse } from 'path';
 import { Server as SocketIOServer, Socket as SocketIOSocket } from 'socket.io';
 import { WebSocket, WebSocketServer } from 'ws';
 import setupHttp from './http';
-import CT from './lib/entities/CT';
-import Task from './lib/entities/Task';
 import authMiddleware from './lib/middleware/auth';
 import httpLoggerMiddleware from './lib/middleware/logging';
 import ProxmoxConnection from './lib/proxmox/ProxmoxConnection';
@@ -27,7 +25,6 @@ import {
     Configuration,
     ServerToClientEvents,
     status,
-    Ticket,
 } from './lib/typing/types';
 import {
     checkAuthToken,
@@ -36,11 +33,11 @@ import {
     createLoggers,
     getEncodedBasicToken,
     printSuccess,
-    sleep,
 } from './lib/util/utils';
-import { ClientNotFoundError, sendTaskToAgent } from './lib/ws/commandAgent';
+import { sendTaskToAgent } from './lib/ws/commandAgent';
 import { wsCommand } from './lib/ws/routing/wsCommand';
 import { handleMessage } from './lib/ws/wsMessageHandler';
+import { EventEmitter } from 'events';
 
 export default class ContainerWorkspaces {
     protected httpServer: HttpServer | HttpsServer;
@@ -50,8 +47,6 @@ export default class ContainerWorkspaces {
     public httpLogger: Logger;
     public wsLogger: Logger;
     public pveLogger: Logger;
-    public logLines: Map<Task['id'], string> = new Map();
-    public codeServerPasswords: Map<Task['id'], string> = new Map();
 
     protected setupHttp = setupHttp;
     protected initMainRouter = initMainRouter;
@@ -77,10 +72,11 @@ export default class ContainerWorkspaces {
     protected configRouter: Router;
     protected pmRouter: Router;
     public proxmoxClient: ProxmoxConnection;
-    protected mySQLClient: MySQLClient;
+    protected prismaClient: PrismaClient;
     protected proxyManager: ProxyManager;
     public io: SocketIOServer<ClientToServerEvents, ServerToClientEvents>;
     public taskToSocketId: Map<Task['id'], SocketIOSocket['id']>;
+    public wsEventEmitter: EventEmitter = new EventEmitter();
 
     constructor(public readonly config: Configuration) {
         this.taskToSocketId = new Map();
@@ -90,7 +86,7 @@ export default class ContainerWorkspaces {
 
         this.setupHttp();
 
-        this.connectDatabase(this.config.database);
+        this.connectDatabase();
 
         this.proxmoxClient = new ProxmoxConnection({
             hostname: config.pve.hostname,
@@ -99,7 +95,7 @@ export default class ContainerWorkspaces {
             password: config.pve.password,
             port: 80,
             pveLogger: this.pveLogger,
-            mySQLClient: this.mySQLClient,
+            prismaClient: this.prismaClient,
             cw: this,
             verifyCertificate: false,
         });
@@ -229,12 +225,14 @@ export default class ContainerWorkspaces {
                                     'shell_exec_error',
                                     'Container not found'
                                 );
-                            const task = new Task({
-                                containerID: containerID,
+                            const task = await this.prismaClient.task.create({
                                 data: {
-                                    action: 'shell_exec_sync',
-                                    args: {
-                                        script: script,
+                                    containerID: containerID,
+                                    data: {
+                                        action: 'shell_exec_sync',
+                                        args: {
+                                            script: script,
+                                        },
                                     },
                                 },
                             });
@@ -299,14 +297,14 @@ export default class ContainerWorkspaces {
      * @returns {Promise<Task>}
      */
     public async addTask(task: Task): Promise<Task> {
-        const sql =
-            'INSERT INTO tasks (id, start_time, data, containerID) VALUES (?, ?, ?, ?)';
-        await this.mySQLClient.executeQuery(sql, [
-            task.id,
-            task.start_time,
-            JSON.stringify(task.data),
-            task.containerID,
-        ]);
+        await this.prismaClient.task.create({
+            data: {
+                id: task.id,
+                start_time: new Date(task.start_time),
+                data: JSON.stringify(task.data),
+                containerID: task.containerID,
+            },
+        });
 
         return task;
     }
@@ -320,10 +318,8 @@ export default class ContainerWorkspaces {
      * @returns {Promise<Task | null>}
      */
     public async getTask(id: Task['id']): Promise<Task | null> {
-        const sql = 'SELECT * FROM tasks WHERE id = ?';
-        const result = await this.mySQLClient.getFirstQueryResult(sql, [id]);
-        if (!result) return null;
-        const task = Task.fromObject(result);
+        const task = await this.prismaClient.task.findFirst({ where: { id } });
+
         return task;
     }
 
@@ -336,19 +332,18 @@ export default class ContainerWorkspaces {
      * @returns {Promise<Task>}
      */
     public async updateTask(task: Task): Promise<Task> {
-        const sql =
-            'UPDATE tasks SET start_time = ?, end_time = ?, data = ?, status = ?, error = ?, containerID = ? WHERE id = ?';
-        await this.mySQLClient.executeQuery(sql, [
-            task.start_time,
-            task.end_time,
-            JSON.stringify(task.data),
-            task.status,
-            task.error,
-            task.containerID,
-            task.id,
-        ]);
+        const updatedTask = await this.prismaClient.task.update({
+            where: { id: task.id },
+            data: {
+                start_time: task.start_time,
+                end_time: task.end_time,
+                data: task.data,
+                error: task.error,
+                containerID: task.containerID,
+            },
+        });
 
-        return task;
+        return updatedTask;
     }
 
     /**
@@ -376,12 +371,14 @@ export default class ContainerWorkspaces {
      * @param  {string} taskid
      * @returns {Promise<void>}
      */
-    public async finishTask(taskid: Task['id']): Promise<void> {
-        const finishedTask = await this.getTask(taskid);
-        finishedTask.status = 'OK';
-        finishedTask.end_time = Date.now();
-
-        await this.updateTask(finishedTask);
+    public async finishTask(id: Task['id']): Promise<void> {
+        await this.prismaClient.task.update({
+            where: { id },
+            data: {
+                status: 'OK',
+                end_time: new Date(),
+            },
+        });
     }
 
     /**
@@ -429,17 +426,22 @@ export default class ContainerWorkspaces {
                 linesCount: 100,
             },
         };
-        const task: Task = new Task({ data, containerID });
+        const task = await this.prismaClient.task.create({
+            data: { data: JSON.stringify(data), containerID },
+        });
         await this.sendTaskToAgent(task, ip);
 
-        // God please forgive us for this sin we're about to commit
-        for (let i = 0; i < 10; i++) {
-            await sleep(20);
-            const lines = this.logLines.get(task.id);
-            if (lines) return lines;
-        }
-
-        return null;
+        return await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject('Timeout reached'), 5000);
+            this.wsEventEmitter.once(
+                task.id.toString(),
+                (lines: string | null) => {
+                    if (!lines) reject('Got no lines');
+                    clearTimeout(timeout);
+                    resolve(lines);
+                }
+            );
+        });
     }
 
     /**
@@ -449,29 +451,32 @@ export default class ContainerWorkspaces {
      * @async
      * @param {number} containerID
      * @param {string} ip
-     * @returns {Promise<string>}
+     * @returns {Promise<T>}
      */
-    public async getVSCodePassword(
+    public async getServiceAuth<T>(
         containerID: number,
-        ip: string
-    ): Promise<string> {
+        ip: string,
+        service: string
+    ): Promise<T> {
         const data: MessageData = {
-            action: 'get_vscode_password',
+            action: 'get_service_auth_token',
             args: {
-                linesCount: 100,
+                service,
             },
         };
-        const task: Task = new Task({ data, containerID });
+        const task = await this.prismaClient.task.create({
+            data: { data: JSON.stringify(data), containerID },
+        });
         await this.sendTaskToAgent(task, ip);
 
-        // God please forgive us for this sin we're about to commit
-        for (let i = 0; i < 10; i++) {
-            await sleep(20);
-            const lines = this.codeServerPasswords.get(task.id);
-            if (lines) return lines;
-        }
-
-        return null;
+        return await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject('Timeout reached'), 5000);
+            this.wsEventEmitter.once(task.id.toString(), (auth: T | null) => {
+                if (!auth) reject('No auth');
+                clearTimeout(timeout);
+                resolve(auth);
+            });
+        });
     }
 
     /**
@@ -518,7 +523,9 @@ export default class ContainerWorkspaces {
             },
         };
 
-        const task: Task = new Task({ data, containerID });
+        const task = await this.prismaClient.task.create({
+            data: { data: JSON.stringify(data), containerID },
+        });
         await this.sendTaskToAgent(task, agentIP);
         return true;
     }
@@ -602,11 +609,9 @@ export default class ContainerWorkspaces {
      * @returns {Promise<Config>}
      */
     public async getConfig(): Promise<Config> {
-        const sql = 'SELECT * FROM config';
-        const result = await this.mySQLClient.getFirstQueryResult(sql);
-        if (!result) return null;
-        const config: Config = JSON.parse(String(result.config));
-        return config;
+        const rawConfig = await this.prismaClient.config.findFirst();
+
+        return rawConfig.config as unknown as Config;
     }
 
     /**
@@ -617,8 +622,10 @@ export default class ContainerWorkspaces {
      * @returns {Promise<Config>}
      */
     private async updateConfig(config: Config): Promise<void> {
-        const sql = 'UPDATE config SET config = ?';
-        await this.mySQLClient.executeQuery(sql, [JSON.stringify(config)]);
+        await this.prismaClient.config.update({
+            where: { id: 1 },
+            data: { config: JSON.stringify(config) },
+        });
     }
 
     /**
@@ -682,11 +689,11 @@ export default class ContainerWorkspaces {
      * @returns {Promise<number | null}}
      */
     protected async getContainerID(ip: string): Promise<number | null> {
-        const sql = 'SELECT id FROM cts WHERE ipv4 = ?';
-        const result = await this.mySQLClient.getFirstQueryResult(sql, ip);
-        if (!result) return null;
-        const ct = CT.fromObject(result);
-        return ct.id;
+        const container = await this.prismaClient.container.findFirst({
+            where: { ipv4: ip },
+        });
+
+        return container.id;
     }
 
     /**
@@ -694,44 +701,17 @@ export default class ContainerWorkspaces {
      * @private
      * @method
      * @async
-     * @param  {ConnectionOptions} connectionConfig
      * @returns {Promise<void>}
      */
-    private async connectDatabase(connectionConfig: ConnectionOptions) {
-        this.mySQLClient = new MySQLClient(connectionConfig);
-        await this.mySQLClient.connect();
-        printSuccess('Connected to database');
-    }
-
-    /**
-     * Tell an agent to create a ticket
-     * @protected
-     * @method
-     * @async
-     * @param  {number} containerID
-     * @param  {Ticket} ticket
-     * @returns {Promise<void>}
-     */
-    protected async createTicket(containerID: number, ticket: Ticket) {
-        const agentIP = await this.proxmoxClient.getContainerIP(
-            Number(containerID)
-        );
-        const connection = this.getConnectedClient(agentIP);
-        if (!connection)
-            throw new ClientNotFoundError(
-                `Could not find client with IP ${agentIP}`
-            );
-
-        const task = new Task({
-            containerID: containerID,
-            data: {
-                action: 'create_ticket',
-                args: {
-                    ticket,
+    private async connectDatabase(): Promise<void> {
+        this.prismaClient = new PrismaClient({
+            datasources: {
+                db: {
+                    url: `mysql://${this.config.database.user}:${this.config.database.password}@${this.config.database.host}:${this.config.database.port}/${this.config.database.database}`,
                 },
             },
         });
-
-        await this.sendTaskToAgent(task, agentIP);
+        await this.prismaClient.$connect();
+        printSuccess('Connected to database');
     }
 }

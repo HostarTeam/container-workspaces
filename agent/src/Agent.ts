@@ -7,10 +7,15 @@ import { wsCommand } from './ws/wsCommand';
 import { Task } from './lib/typing/Task';
 import passwd from 'passwd-linux';
 import { MessageDataResponse } from './lib/typing/MessageData';
-import WebShell from './WebShell/WebShell';
 import Ticket from './lib/typing/Ticket';
-import Service from './lib/services/baseService';
 import VSCode from './lib/services/vscode';
+import WebShell from './lib/services/webshell';
+import Service from './lib/services/baseService';
+
+interface Services extends Record<string, Service> {
+    vscode: VSCode;
+    webshell: WebShell;
+}
 
 export default class Agent {
     public ws: WebSocket;
@@ -18,21 +23,15 @@ export default class Agent {
     public logFilePath: string;
     public tickets: Map<string, Ticket> = new Map();
     private reconnectInterval: NodeJS.Timeout;
-    private webShell: WebShell;
     protected handleMessage: (message: RawData) => void = handleMessage;
     protected wsCommand: (commandData: Task) => void = wsCommand;
-    public serviceJournal: Map<string, string>;
 
-    private services: { [key: string]: Service } = {
-        vsCode: new VSCode(),
-    };
+    public services: Services;
 
     constructor(public config: AgentConfiguration) {
         this.configureLogger();
         this.initWebSocket();
-        this.startWebShell();
-        this.serviceJournal = new Map();
-        this.runServices();
+        this.startupServices();
     }
 
     private initWebSocket(isReconnection = false): void {
@@ -98,16 +97,6 @@ export default class Agent {
         this.logFilePath = location;
     }
 
-    private startWebShell(): void {
-        this.webShell = new WebShell(
-            {
-                config: this.config,
-                logger: this.logger,
-            },
-            this.tickets
-        );
-    }
-
     public changePassword(newPassword: string): void {
         passwd.changePassword(
             'root',
@@ -122,15 +111,28 @@ export default class Agent {
         );
     }
 
+    private initServices(): void {
+        this.services = { vscode: new VSCode(), webshell: new WebShell() };
+    }
+
     private runServices(): void {
-        // VSCode service
-        const vscodeToken = generatePassword(64);
-        this.serviceJournal.set('vscode_token', vscodeToken);
-        this.services.vsCode.setArgs({
-            token: vscodeToken,
+        this.services.vscode.setArgs({
+            token: generatePassword(64),
             port: 8443,
             host: '0.0.0.0',
         });
-        this.services.vsCode.start();
+        this.services.vscode.start();
+
+        this.services.webshell.setArgs({
+            token: generatePassword(64),
+            port: 8444,
+            host: '0.0.0.0',
+        });
+        this.services.webshell.start();
+    }
+
+    private startupServices(): void {
+        this.initServices();
+        this.runServices();
     }
 }
