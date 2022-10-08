@@ -9,7 +9,7 @@
         "build": "tsc -p .",
         "lint": "eslint . --ext .ts --max-warnings=0",
         "compile": "npm run build && pkg . --output build/usr/bin/cw-daemon",
-        "build-deb": "npm run compile && dpkg --build build/ cw-daemon.deb",
+        "build-deb": "./bundle-deb.sh && npm run compile && dpkg --build build/ cw-daemon.deb",
         "prisma:generate": "prisma generate"
     },
     "repository": {
