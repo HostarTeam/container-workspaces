@@ -104,5 +104,4 @@ dist
 .tern-port
 
 # Binary files
-cw-*
 *.deb
