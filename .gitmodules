@@ -1,0 +1,3 @@
+[submodule "daemon/cw-tools"]
+	path = daemon/cw-tools
+	url = https://github.com/HostarTeam/cw-tools.git
