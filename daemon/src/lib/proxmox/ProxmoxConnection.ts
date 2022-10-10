@@ -57,6 +57,7 @@ import {
     deleteLocation,
     setCTAsReady,
     updateIPUsedStatus,
+    getClusterResources,
 } from './apiTools';
 
 export default class ProxmoxConnection {
@@ -118,6 +119,7 @@ export default class ProxmoxConnection {
     public changeCTHostname = changeCTHostname;
     public setCTAsReady = setCTAsReady;
     public getContainers = getContainers;
+    public getClusterResources = getClusterResources;
     public getContainerStatuses = getContainerStatuses;
     public scoreNode = scoreNode;
     public createBackup = createBackup;

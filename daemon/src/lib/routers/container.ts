@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { MessageData } from '../typing/MessageData';
-import { ActionResult, ContainerStatus, LXC } from '../typing/types';
+import { ActionResult, ContainerStatus } from '../typing/types';
 import { requireBodyProps, validatePassword } from '../util/utils';
 import { ClientNotFoundError } from '../ws/commandAgent';
 
@@ -12,18 +12,33 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
     /**
      * This route is used to get the current configuration of all containers.
      */
-    router.get('/', async (req: Request, res: Response) => {
-        const containers: LXC[] = await this.proxmoxClient.getContainers();
-        res.send(containers);
-    });
+    router.get('/', async (_, res: Response) => {
+        const containerMap: Map<
+            number,
+            Partial<ContainerStatus & { ip: string; ready: boolean }>
+        > = new Map(
+            (await this.prismaClient.container.findMany()).map(
+                (dbContainer) => {
+                    return [
+                        dbContainer.id,
+                        { ip: dbContainer.ipv4, ready: dbContainer.ready },
+                    ];
+                }
+            )
+        );
 
-    /**
-     * This route is used to get the current status of all containers.
-     */
-    router.get('/status', async (req: Request, res: Response) => {
-        const containerStatuses: ContainerStatus[] =
-            await this.proxmoxClient.getContainerStatuses();
-        res.send(containerStatuses);
+        (await this.proxmoxClient.getContainerStatuses()).forEach(
+            (container) => {
+                const mappedContainer = containerMap.get(container.vmid);
+                if (!mappedContainer) return;
+
+                containerMap.set(container.vmid, {
+                    ...mappedContainer,
+                    ...container,
+                });
+            }
+        );
+        res.send(Array.from(containerMap.values()));
     });
 
     /**
@@ -35,27 +50,21 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
         this.validateContainerID(),
         async (req: Request, res: Response) => {
             const containerID = Number(req.params.containerID);
-            const container: LXC = await this.proxmoxClient.getContainerInfo(
+            const container = await this.proxmoxClient.getContainerStatus(
                 containerID
             );
 
-            res.send(container);
-        }
-    );
+            const dbContainer = await this.prismaClient.container.findFirst({
+                where: {
+                    id: container.vmid,
+                },
+            });
 
-    /**
-     * @param {string} containerID
-     * This route is used in order to get the current status of a container.
-     */
-    router.get(
-        '/:containerID/status',
-        this.validateContainerID(),
-        async (req: Request, res: Response) => {
-            const containerID = Number(req.params.containerID);
-            const status: ContainerStatus =
-                await this.proxmoxClient.getContainerStatus(containerID);
-
-            res.send(status);
+            res.send({
+                ...container,
+                ip: dbContainer.ipv4,
+                ready: dbContainer.ready,
+            });
         }
     );
 
