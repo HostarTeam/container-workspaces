@@ -2,7 +2,6 @@ import { Location, Node } from '@prisma/client';
 
 /**
  * This interface is used to represent the hardware options in the configuration in the database
- * @interface
  */
 export interface CTHardwareOptions {
     ct_cores: number;
@@ -13,7 +12,6 @@ export interface CTHardwareOptions {
 
 /**
  * This interface is used to represent the options used to create a container
- * @interface
  */
 
 interface BasicCreateCTOptions {

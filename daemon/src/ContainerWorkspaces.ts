@@ -103,9 +103,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Initialize the websocket server.
-     * @protected
-     * @method
-     * @returns {void}
      */
     protected initWebSocketServer(): void {
         this.wss = new WebSocketServer({ noServer: true });
@@ -179,9 +176,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Inititalize the socket.io server.
-     * @protected
-     * @method
-     * @returns {void}
      */
     protected initSocketIOServer(): void {
         this.io.on(
@@ -259,10 +253,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Configure loggers.
-     * @private
-     * @method
-     * @param  {string} logDir='/var/log/cw'
-     * @returns {void}
      */
     private configureLoggers(logDir = '/var/log/cw'): void {
         const logsName = ['main', 'http', 'ws', 'pve'];
@@ -276,9 +266,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Initialize all routers.
-     * @protected
-     * @method
-     * @returns {void}
      */
     protected initRouters(): void {
         this.initConfigRouter();
@@ -290,11 +277,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Add a task to the database.
-     * @public
-     * @method
-     * @async
-     * @param  {Task} task
-     * @returns {Promise<Task>}
      */
     public async addTask(task: Task): Promise<Task> {
         await this.prismaClient.task.create({
@@ -311,11 +293,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Get a task from the database.
-     * @public
-     * @method
-     * @async
-     * @param  {string} id
-     * @returns {Promise<Task | null>}
      */
     public async getTask(id: Task['id']): Promise<Task | null> {
         const task = await this.prismaClient.task.findFirst({ where: { id } });
@@ -325,11 +302,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Update a task in the database
-     * @public
-     * @method
-     * @async
-     * @param  {Task} task
-     * @returns {Promise<Task>}
      */
     public async updateTask(task: Task): Promise<Task> {
         const updatedTask = await this.prismaClient.task.update({
@@ -348,12 +320,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Mark a task as errored in the database
-     * @public
-     * @method
-     * @async
-     * @param  {string} taskid
-     * @param  {Error} error
-     * @returns {Promise<void>}
      */
     public async errorTask(taskid: Task['id'], error: Error): Promise<void> {
         const erroredTask = await this.getTask(taskid);
@@ -365,11 +331,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Mark a task as finished in the database
-     * @public
-     * @method
-     * @async
-     * @param  {string} taskid
-     * @returns {Promise<void>}
      */
     public async finishTask(id: Task['id']): Promise<void> {
         await this.prismaClient.task.update({
@@ -383,13 +344,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Change the status of a container
-     * @public
-     * @method
-     * @async
-     * @param  {Request} req
-     * @param  {Response} res
-     * @param  {status} status
-     * @returns {Promise<void>}
      */
     public async triggerStatusChange(
         req: Request,
@@ -412,12 +366,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Get the status of a container
-     * @protected
-     * @method
-     * @async
-     * @param {number} containerID
-     * @param {string} ip
-     * @returns {Promise<string>}
      */
     protected async getLogs(containerID: number, ip: string): Promise<string> {
         const data: MessageData = {
@@ -446,12 +394,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Get the status of a container
-     * @public
-     * @method
-     * @async
-     * @param {number} containerID
-     * @param {string} ip
-     * @returns {Promise<T>}
      */
     public async getServiceAuth<T>(
         containerID: number,
@@ -481,10 +423,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Get a client from the connected clients list
-     * @public
-     * @method
-     * @param  {string} ip
-     * @returns {WebSocket | null}
      */
     public getConnectedClient(ip: string): WebSocket | null {
         const clientList: WebSocket[] = Array.from(this.wss.clients);
@@ -499,12 +437,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Change the password of a container
-     * @protected
-     * @method
-     * @async
-     * @param  {number} containerID
-     * @param  {string} newPassword
-     * @returns {Promise<boolean>}
      */
     protected async changeContainerPassword(
         containerID: number,
@@ -532,9 +464,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Get ip of container and set in in req
-     * @protected
-     * @method
-     * @returns {Handler}
      */
     protected getContainerIP(): Handler {
         return async (req, res, next) => {
@@ -570,9 +499,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Validates the containerID of the request
-     * @protected
-     * @method
-     * @returns {Handler}
      */
     protected validateContainerID(): Handler {
         return async (req, res, next) => {
@@ -603,10 +529,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Get the configuration from the database
-     * @public
-     * @method
-     * @async
-     * @returns {Promise<Config>}
      */
     public async getConfig(): Promise<Config> {
         const rawConfig = await this.prismaClient.config.findFirst();
@@ -616,10 +538,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Update the configuration in the database
-     * @private
-     * @method
-     * @param  {Config} config
-     * @returns {Promise<Config>}
      */
     private async updateConfig(config: Config): Promise<void> {
         await this.prismaClient.config.update({
@@ -630,8 +548,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Get the container hardware options from the database
-     * @async
-     * @returns {Promise<CTHardwareOptions>}
      */
     protected async getCTHardwareOptions(): Promise<CTHardwareOptions> {
         const config = await this.getConfig();
@@ -640,11 +556,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Update the container hardware options in the database
-     * @protected
-     * @method
-     * @async
-     * @param  {CTHardwareOptions} options
-     * @returns {Promise<CTHardwareOptions>}
      */
     protected async udpateCTOptions(options: CTHardwareOptions): Promise<void> {
         const config = await this.getConfig();
@@ -655,10 +566,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Get the initialization commands from the database
-     * @protected
-     * @method
-     * @async
-     * @returns {Promise<string[]>}
      */
     protected async getInitCommands(): Promise<string[]> {
         const config = await this.getConfig();
@@ -667,11 +574,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Update the initialization commands in the database
-     * @protected
-     * @method
-     * @async
-     * @param  {string[]} commands
-     * @returns {Promise<void>}
      */
     protected async updateInitCommands(commands: string[]): Promise<void> {
         const config = await this.getConfig();
@@ -682,11 +584,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Get the container ID in proxmox via its ip address
-     * @protected
-     * @method
-     * @async
-     * @param  {string} ip
-     * @returns {Promise<number | null}}
      */
     protected async getContainerID(ip: string): Promise<number | null> {
         const container = await this.prismaClient.container.findFirst({
@@ -698,10 +595,6 @@ export default class ContainerWorkspaces {
 
     /**
      * Connect the application to the database
-     * @private
-     * @method
-     * @async
-     * @returns {Promise<void>}
      */
     private async connectDatabase(): Promise<void> {
         this.prismaClient = new PrismaClient({

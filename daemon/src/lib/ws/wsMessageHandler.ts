@@ -8,10 +8,6 @@ import {
 
 /**
  * Basic handler for ws messages, only used to filter out bad messages
- * @param  {RawData} message
- * @param  {IncomingMessage} req
- * @param  {WebSocket} socket
- * @returns {void}
  */
 export function handleMessage(
     this: ContainerWorkspaces,
