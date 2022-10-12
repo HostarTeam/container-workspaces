@@ -82,6 +82,11 @@ export interface CommandError {
 
 export type MessageRoutingHandler = MessageRouting[keyof MessageRouting];
 
+export type ResponseContainer = ContainerStatus & {
+    ip: string;
+    ready: boolean;
+};
+
 /**
  * This interface is used to define an LXC container in the PVE api
  * @interface
@@ -202,22 +207,20 @@ declare global {
  * @interface
  */
 export interface ContainerStatus {
+    id?: `${ContainerStatus['type']}/${ContainerStatus['vmid']}`;
     cpu: number; // Represents the cpu usage with 0 being 0% and 1 being 100%
-    cpus: number; // Represents the number of cpu cores
+    maxcpu: number; // Represents the number of cpu cores
     disk: number; // Represents the used disk size in bytes.
     diskread: number; // Represents the disk read in bytes.
     diskwrite: number; // Represents the disk write in bytes.
-    ha: { managed: boolean };
     maxdisk: number; // Represents the max disk size in bytes.
     maxmem: number; // Represents the max memory size in bytes.
-    maxswap: number; // Represents the max swap size in bytes.
     mem: number; // Represents the used memory size in bytes.
     name: string; // Represents the container name.
     netin: string; // Represents the network in in bytes.
     netout: number; // Represents the network out in bytes.
-    pid: number; // Represents the process id of the container.
     status: 'running' | 'stopped'; // Represents the state of the container.
-    swap: number; // Represents the used swap size in bytes.
+    template: 0 | 1; // Represents whether the container is a template
     type: 'lxc';
     uptime: number; // Represents the uptime in seconds.
     vmid: number; // Represents the container id.

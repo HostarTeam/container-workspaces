@@ -9,6 +9,7 @@ import {
     LXC,
     Node,
     ProxmoxResponse,
+    ResponseContainer,
     Snapshot,
     status,
     Storage,
@@ -823,8 +824,6 @@ export async function getContainerStatus(
         'GET'
     );
     if (!ctStatus) return null;
-    if (ctStatus.ha?.managed != null)
-        ctStatus.ha.managed = !!ctStatus.ha.managed;
 
     return ctStatus;
 }
@@ -901,6 +900,7 @@ export async function setCTAsReady(
 
 /**
  * Get information on all containers.
+ * @deprecated
  * @async
  * @returns {Promise<LXC[]>}
  */
@@ -916,6 +916,20 @@ export async function getContainers(this: ProxmoxConnection): Promise<LXC[]> {
     );
 }
 
+export async function getClusterResources(
+    this: ProxmoxConnection
+): Promise<ContainerStatus[]> {
+    const vms = await this.call<ContainerStatus[]>(
+        'cluster/resources?type=vm',
+        'GET'
+    );
+
+    return vms.data.map((vm) => {
+        delete vm.id;
+        return vm;
+    });
+}
+
 /**
  * Get current status of all containers.
  * @async
@@ -924,15 +938,61 @@ export async function getContainers(this: ProxmoxConnection): Promise<LXC[]> {
 export async function getContainerStatuses(
     this: ProxmoxConnection
 ): Promise<ContainerStatus[]> {
-    const containerStatusesAsPromises: Promise<ContainerStatus>[] = [];
-    const cts: Container[] = await this.prismaClient.container.findMany();
-    for (const ct of cts) {
-        const containerData = this.getContainerStatus(ct.id);
-        if (containerData) containerStatusesAsPromises.push(containerData);
-    }
-    return (await Promise.all(containerStatusesAsPromises)).filter(
-        (container) => !!container
+    const ctIDs = await this.prismaClient.container.findMany({
+        select: { id: true },
+    });
+
+    const ctIDsQuickAccess = new Set(ctIDs.map((ct) => ct.id));
+    const resources = await this.getClusterResources();
+    const managedCTS = resources.filter((resource) => {
+        return resource.type === 'lxc' && ctIDsQuickAccess.has(resource.vmid);
+    });
+
+    return managedCTS;
+}
+
+export async function getSpecificContainerStatuses(
+    this: ProxmoxConnection,
+    vmids: number[]
+): Promise<ResponseContainer[]> {
+    const uniqueVmids = [...new Set(vmids)];
+    const dbContainers = await this.prismaClient.container.findMany({
+        where: {
+            id: {
+                in: uniqueVmids,
+            },
+        },
+    });
+    const existingVmids = dbContainers.map((dbContainer) => dbContainer.id);
+
+    const dbContainersMap = new Map(
+        dbContainers.map((dbContainer) => [
+            dbContainer.id,
+            { ip: dbContainer.ipv4, ready: dbContainer.ready },
+        ])
     );
+
+    const containerStatusPromises: Promise<ContainerStatus>[] = [];
+    for (const id of existingVmids) {
+        const containerPromise = this.getContainerStatus(id);
+        containerStatusPromises.push(containerPromise);
+    }
+
+    const containerStatuses = await Promise.all(containerStatusPromises);
+
+    const responseContainers: ResponseContainer[] = [];
+    for (const containerStatus of containerStatuses) {
+        if (!containerStatus) continue;
+
+        const dbContainer = dbContainersMap.get(containerStatus.vmid);
+        if (!dbContainer) continue;
+
+        responseContainers.push({
+            ...containerStatus,
+            ...dbContainer,
+        });
+    }
+    return responseContainers;
 }
 
 export async function getStorages(

@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { MessageData } from '../typing/MessageData';
-import { ActionResult, ContainerStatus, LXC } from '../typing/types';
+import { ActionResult, ResponseContainer } from '../typing/types';
 import { requireBodyProps, validatePassword } from '../util/utils';
 import { ClientNotFoundError } from '../ws/commandAgent';
 
@@ -12,19 +12,54 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
     /**
      * This route is used to get the current configuration of all containers.
      */
-    router.get('/', async (req: Request, res: Response) => {
-        const containers: LXC[] = await this.proxmoxClient.getContainers();
-        res.send(containers);
+    router.get('/', async (_, res: Response) => {
+        const containerMap: Map<number, Partial<ResponseContainer>> = new Map(
+            (await this.prismaClient.container.findMany()).map(
+                (dbContainer) => {
+                    return [
+                        dbContainer.id,
+                        { ip: dbContainer.ipv4, ready: dbContainer.ready },
+                    ];
+                }
+            )
+        );
+
+        (await this.proxmoxClient.getContainerStatuses()).forEach(
+            (container) => {
+                const mappedContainer = containerMap.get(container.vmid);
+                if (!mappedContainer) return;
+
+                containerMap.set(container.vmid, {
+                    ...mappedContainer,
+                    ...container,
+                });
+            }
+        );
+        res.send(Array.from(containerMap.values()));
     });
 
     /**
-     * This route is used to get the current status of all containers.
+     * This route is used in order to send the container status of specified containers
+     * @param {number[]} vmids
      */
-    router.get('/status', async (req: Request, res: Response) => {
-        const containerStatuses: ContainerStatus[] =
-            await this.proxmoxClient.getContainerStatuses();
-        res.send(containerStatuses);
-    });
+
+    router.patch(
+        '/specific',
+        requireBodyProps('vmids'),
+        async (req: Request, res: Response) => {
+            const vmids: number[] = req.body.vmids;
+            if (!Array.isArray(vmids)) {
+                return res.status(400).send({
+                    status: 'error',
+                    message: 'vmids must be an integer array',
+                });
+            }
+
+            res.send(
+                await this.proxmoxClient.getSpecificContainerStatuses(vmids)
+            );
+        }
+    );
 
     /**
      * @param {string} containerID
@@ -35,27 +70,21 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
         this.validateContainerID(),
         async (req: Request, res: Response) => {
             const containerID = Number(req.params.containerID);
-            const container: LXC = await this.proxmoxClient.getContainerInfo(
+            const container = await this.proxmoxClient.getContainerStatus(
                 containerID
             );
 
-            res.send(container);
-        }
-    );
+            const dbContainer = await this.prismaClient.container.findFirst({
+                where: {
+                    id: container.vmid,
+                },
+            });
 
-    /**
-     * @param {string} containerID
-     * This route is used in order to get the current status of a container.
-     */
-    router.get(
-        '/:containerID/status',
-        this.validateContainerID(),
-        async (req: Request, res: Response) => {
-            const containerID = Number(req.params.containerID);
-            const status: ContainerStatus =
-                await this.proxmoxClient.getContainerStatus(containerID);
-
-            res.send(status);
+            res.send({
+                ...container,
+                ip: dbContainer.ipv4,
+                ready: dbContainer.ready,
+            });
         }
     );
 
