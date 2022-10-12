@@ -171,9 +171,6 @@ export default class ProxmoxConnection {
 
     /**
      * Initialize the proxmox api server.
-     * @private
-     * @method
-     * @returns {void}
      */
     private intialize(): void {
         if (this.port != 80)
@@ -187,10 +184,6 @@ export default class ProxmoxConnection {
 
     /**
      * Connect to the proxmox api server and get the API keys.
-     * @private
-     * @method
-     * @async
-     * @returns {Promise<void>}
      */
     private async connect(): Promise<void> {
         await this.getAuthKeys();

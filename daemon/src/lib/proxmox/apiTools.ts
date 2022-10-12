@@ -24,12 +24,6 @@ import { Container, Node as SQLNode, Ip as IP, Location } from '@prisma/client';
 
 /**
  * Call the proxmox API with options and return the response data.
- * @template T
- * @async
- * @param {string} path
- * @param {string} method
- * @param {any} [body=null]
- * @returns {Promise<ProxmoxResponse<T>>}
  */
 export async function call<T>(
     this: ProxmoxConnection,
@@ -88,8 +82,6 @@ export async function call<T>(
 
 /**
  * Get all the nodes in proxmox.
- * @async
- * @returns {Promise<Node[]>}
  */
 export async function getNodes(this: ProxmoxConnection): Promise<Node[]> {
     const { data: PVENodes } = await this.call<Node[]>('nodes', 'GET');
@@ -106,9 +98,6 @@ export async function getNodes(this: ProxmoxConnection): Promise<Node[]> {
 
 /**
  * Get a node in the PVE cluster and return it and whether it exists in the database.
- * @async
- * @param  {string} nodename
- * @returns {Promise<{node: Node, exists: boolean}>}
  */
 export async function getPVENode(
     this: ProxmoxConnection,
@@ -126,8 +115,6 @@ export async function getPVENode(
 
 /**
  * Get all the nodes saved in the database.
- * @async
- * @returns {Promise<SQLNode[]>}
  */
 export async function getSQLNodes(this: ProxmoxConnection): Promise<SQLNode[]> {
     return await this.prismaClient.node.findMany();
@@ -135,9 +122,6 @@ export async function getSQLNodes(this: ProxmoxConnection): Promise<SQLNode[]> {
 
 /**
  * Get a node saved in the database.
- * @async
- * @param  {string} nodename
- * @returns {Promise<SQLNode>}
  */
 export async function getSQLNode(
     this: ProxmoxConnection,
@@ -155,9 +139,6 @@ export async function getSQLNode(
 
 /**
  * Add a node to the database.
- * @async
- * @param  {SQLNode} node
- * @returns {Promise<void>}
  */
 export async function addNodeToDatabase(
     this: ProxmoxConnection,
@@ -168,9 +149,6 @@ export async function addNodeToDatabase(
 
 /**
  * Remove a node from the database.
- * @async
- * @param  {string} nodename
- * @returns {Promise<void>}
  */
 export async function removeNodeFromDatabase(
     this: ProxmoxConnection,
@@ -181,8 +159,6 @@ export async function removeNodeFromDatabase(
 
 /**
  * Get all the locations from the nodes table in the database
- * @async
- * @returns {Promise<string[]>}
  */
 export async function getLocations(
     this: ProxmoxConnection
@@ -192,9 +168,6 @@ export async function getLocations(
 
 /**
  * Check if location exists by its name.
- * @async
- * @param {string} location
- * @returns {Promise<string>}
  */
 export async function locationExists(
     this: ProxmoxConnection,
@@ -211,8 +184,6 @@ export async function locationExists(
 
 /**
  * Add a location to the database.
- * @async
- * @param  {string} location
  */
 export async function addLocation(
     this: ProxmoxConnection,
@@ -223,8 +194,6 @@ export async function addLocation(
 
 /**
  * Delete a location from the database
- * @async
- * @param {number} id
  */
 export async function deleteLocation(
     this: ProxmoxConnection,
@@ -235,9 +204,6 @@ export async function deleteLocation(
 
 /**
  * Get location by its ID.
- * @async
- * @param {number} id
- * @returns {Promise<Location>}
  */
 export async function getLocation(
     this: ProxmoxConnection,
@@ -254,8 +220,6 @@ export async function getLocation(
 
 /**
  * Get all locations where there are fine nodes
- * @async
- * @returns {Promise<Location[]>}
  */
 export async function getAvailableLocations(
     this: ProxmoxConnection
@@ -282,8 +246,6 @@ export async function getAvailableLocations(
 
 /**
  * Receive the auth keys from the PVE api and store them on the class.
- * @async
- * @returns {Promise<void>}
  */
 export async function getAuthKeys(this: ProxmoxConnection): Promise<void> {
     try {
@@ -310,9 +272,6 @@ export async function getAuthKeys(this: ProxmoxConnection): Promise<void> {
 
 /**
  * Delete a container from the database.
- * @async
- * @param  {number} id
- * @returns {Promise<void>}
  */
 export async function deleteContainerFromDB(
     this: ProxmoxConnection,
@@ -323,10 +282,6 @@ export async function deleteContainerFromDB(
 
 /**
  * Delete a container from the PVE node and from the database.
- * @async
- * @param  {number} id
- * @param  {string} ipv4
- * @returns {Promise<ActionResult>}
  */
 export async function deleteContainer(
     this: ProxmoxConnection,
@@ -358,8 +313,6 @@ export async function deleteContainer(
 
 /**
  * Get an ip which is not used from the database.
- * @async
- * @returns {Promise<IP | null>}
  */
 export async function getFreeIP(
     this: ProxmoxConnection,
@@ -381,8 +334,6 @@ export async function getFreeIP(
 
 /**
  * Get all ips saved in the database.
- * @async
- * @returns {Promise<IP[]>}
  */
 export async function getIPs(this: ProxmoxConnection): Promise<IP[]> {
     const res = await this.prismaClient.ip.findMany();
@@ -392,9 +343,6 @@ export async function getIPs(this: ProxmoxConnection): Promise<IP[]> {
 
 /**
  * Add an ip to the database.
- * @async
- * @param  {IP} ip
- * @returns {Promise<void>}
  */
 export async function addIPToDatabase(
     this: ProxmoxConnection,
@@ -405,9 +353,6 @@ export async function addIPToDatabase(
 
 /**
  * Remove an ip from the database.
- * @async
- * @param  {string} ipv4
- * @returns {Promise<void>}
  */
 export async function removeIPFromDatabase(
     this: ProxmoxConnection,
@@ -418,9 +363,6 @@ export async function removeIPFromDatabase(
 
 /**
  * Get an SQLIP from the database based on its ipv4.
- * @async
- * @param  {string} ipv4
- * @returns {Promise<IP | null>}
  */
 export async function getIP(
     this: ProxmoxConnection,
@@ -431,10 +373,6 @@ export async function getIP(
 
 /**
  * Update an ip's 'used' field in the database.
- * @async
- * @param  {IP} ip
- * @param  {boolean} status
- * @returns {Promise<void>}
  */
 export async function updateIPUsedStatus(
     this: ProxmoxConnection,
@@ -449,12 +387,6 @@ export async function updateIPUsedStatus(
 
 /**
  * Create a container on a PVE node based on a location.
- * @async
- * @param {CreateCTByLocationOptions} options
- * @param  {string} options.location
- * @param  {string} options.template
- * @param  {string} options.password
- * @returns {Promise<ActionResult>}
  */
 export async function createContainerByLocation(
     this: ProxmoxConnection,
@@ -492,12 +424,6 @@ export async function createContainerByLocation(
 
 /**
  * Create a container on a PVE node based on a node.
- * @async
- * @param {CreateCTByNodeOptions} options
- * @param  {string} options.node
- * @param  {string} options.template
- * @param  {string} options.password
- * @returns {Promise<ActionResult>}
  */
 export async function createContainerByNode(
     this: ProxmoxConnection,
@@ -529,14 +455,6 @@ export async function createContainerByNode(
 
 /**
  * Create a container on a PVE node based on a node.
- * @async
- * @param  {Object} obj
- * @param  {string} obj.options
- * @param  {string} obj.node
- * @param  {string} obj.template
- * @param  {string} obj.ip
- * @param  {string} obj.password
- * @returns {Promise<ActionResult>}
  */
 export async function createContainerInProxmox(
     this: ProxmoxConnection,
@@ -601,10 +519,6 @@ export async function createContainerInProxmox(
 
 /**
  * Add a container to the database.
- * @async
- * @param  {number} id
- * @param  {string} ipv4
- * @returns {Promise<void>}
  */
 export async function addCotainerToDatabase(
     this: ProxmoxConnection,
@@ -621,9 +535,6 @@ export async function addCotainerToDatabase(
 
 /**
  * Get the ip of a PVE node based on its name.
- * @async
- * @param  {string} node
- * @returns {Promise<string>}
  */
 export async function getNodeIP(
     this: ProxmoxConnection,
@@ -641,9 +552,6 @@ export async function getNodeIP(
 
 /**
  * Check if a node is fine.
- * @async
- * @param  {string} nodename
- * @returns {Promise<boolean>}
  */
 export async function returnNodeIfFine(
     this: ProxmoxConnection,
@@ -664,9 +572,6 @@ export async function returnNodeIfFine(
 
 /**
  * Get the first fine node in the cluster
- * @async
- * @param  {SQLNode[]} nodes
- * @returns {Promise<string>}
  */
 export async function getFirstFineNode(
     this: ProxmoxConnection,
@@ -696,8 +601,6 @@ export async function getFirstFineNode(
 
 /**
  * Score a node based on its resource use and availability and return a number between 0 and 100.
- * @param  {Node} node
- * @returns {Promise<number>}
  */
 export function scoreNode(this: ProxmoxConnection, node: Node): number {
     let score = 0;
@@ -717,9 +620,6 @@ export function scoreNode(this: ProxmoxConnection, node: Node): number {
 
 /**
  * Get the first fine node in a given location
- * @async
- * @param  {number} locationID
- * @returns {Promise<string | null>}
  */
 export async function getNodeByLocation(
     this: ProxmoxConnection,
@@ -734,8 +634,6 @@ export async function getNodeByLocation(
 
 /**
  * Get the resources of a node.
- * @async
- * @returns {Promise<VMResource>}
  */
 export async function getResources(
     this: ProxmoxConnection
@@ -749,9 +647,6 @@ export async function getResources(
 
 /**
  * Get the node a given container is running on
- * @async
- * @param  {number} id
- * @returns {Promise<string>}
  */
 export async function getNodeOfContainer(
     this: ProxmoxConnection,
@@ -765,9 +660,6 @@ export async function getNodeOfContainer(
 
 /**
  * Get the ip of a container based on its id.
- * @async
- * @param  {number} id
- * @returns {Promise<string>}
  */
 export async function getContainerIP(
     this: ProxmoxConnection,
@@ -786,9 +678,6 @@ export async function getContainerIP(
 
 /**
  * Get the information of a container based on its id.
- * @async
- * @param  {number} id
- * @returns {Promise<LXC>}
  */
 export async function getContainerInfo(
     this: ProxmoxConnection,
@@ -809,9 +698,6 @@ export async function getContainerInfo(
 
 /**
  * Get the status of container based on its id.
- * @async
- * @param {number} id
- * @returns {Promise<ContainerStatus>}
  */
 export async function getContainerStatus(
     this: ProxmoxConnection,
@@ -830,10 +716,6 @@ export async function getContainerStatus(
 
 /**
  * Change the power status of a container.
- * @async
- * @param {number} containerID
- * @param {status} status
- * @returns {Promise<string>}
  */
 export async function changeContainerStatus(
     this: ProxmoxConnection,
@@ -866,10 +748,6 @@ export async function changeContainerStatus(
 
 /**
  * Change the hostname of a container.
- * @async
- * @param {number} id
- * @param {string} hostname
- * @returns {*}  {Promise<void>}
  */
 export async function changeCTHostname(
     this: ProxmoxConnection,
@@ -884,9 +762,6 @@ export async function changeCTHostname(
 
 /**
  * Mark a container as ready in the database.
- * @async
- * @param {number} id
- * @returns {Promise<void>}
  */
 export async function setCTAsReady(
     this: ProxmoxConnection,
@@ -901,8 +776,6 @@ export async function setCTAsReady(
 /**
  * Get information on all containers.
  * @deprecated
- * @async
- * @returns {Promise<LXC[]>}
  */
 export async function getContainers(this: ProxmoxConnection): Promise<LXC[]> {
     const containersAsPromises: Promise<LXC>[] = [];
@@ -932,8 +805,6 @@ export async function getClusterResources(
 
 /**
  * Get current status of all containers.
- * @async
- * @returns {Promise<ContainerStatus[]>}
  */
 export async function getContainerStatuses(
     this: ProxmoxConnection

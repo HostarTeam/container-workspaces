@@ -10,8 +10,6 @@ import { ClientToServerEvents, ServerToClientEvents } from './lib/typing/types';
 
 /**
  * Setup the http server
- * @param  {ContainerWorkspaces} this
- * @returns {void}
  */
 export default function setupHttp(this: ContainerWorkspaces): void {
     if (this.config.protocol === 'http') {

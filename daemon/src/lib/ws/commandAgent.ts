@@ -3,10 +3,6 @@ import ContainerWorkspaces from '../../ContainerWorkspaces';
 
 /**
  * Send a task to an agent
- * @async
- * @param  {Task} task
- * @param  {string} ipaddr
- * @returns {Promise<void>}
  */
 export async function sendTaskToAgent(
     this: ContainerWorkspaces,

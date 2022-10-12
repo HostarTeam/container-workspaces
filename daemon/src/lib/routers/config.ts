@@ -52,7 +52,6 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
 
     /**
      * This route is used in order to remove a PVE node from the available nodes in the databases.
-     * @param {string} nodename The name of the node to remove in req.params.
      */
     router.delete(
         '/nodes/:nodeName',
@@ -89,7 +88,6 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
 
     /**
      * This route is used in order to add a location to the database.
-     * @param {string} location The location to add in req.body.
      */
     router.post(
         '/locations',
@@ -114,7 +112,6 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
 
     /**
      * This route is used in order to delete a location from the database.
-     * @param {number} id The location to add in req.body.
      */
     router.delete('/locations/:id', async (req: Request, res: Response) => {
         const id = Number(req.params.id);
@@ -149,7 +146,6 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
 
     /**
      * This route is used in order to delete a location from the database.
-     * @param {number} id The location to add in req.body.
      */
     router.get('/locations/:id', async (req: Request, res: Response) => {
         const id = Number(req.params.id);
@@ -198,9 +194,6 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
 
     /**
      * This route is used in order to add a ip address to the available ip addresses in the databases.
-     * @param {string} ipv4 The ipv4 address in req.body.
-     * @param {string} gateway The gateway address in req.body.
-     * @param {string} netmask The netmask address in req.body.
      */
     router.post(
         '/ips/add',
@@ -233,9 +226,6 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
 
     /**
      * This route is used in order to add ipv4 addresses to the available ip addresses in the database in bulk on the same network.
-     * @param {string[]} ipv4s The ipv4 addresses in req.body.
-     * @param {string} gateway The gateway address in req.body.
-     * @param {string} netmask The netmask address in req.body.
      */
     router.post(
         '/ips/addbulk',
@@ -278,7 +268,6 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
 
     /**
      * This route is used in order to remove a ip address from the available ip addresses in the databases.
-     * @param {string} ipv4 The ipv4 address in req.params
      */
     router.delete('/ips/:ipv4', async (req: Request, res: Response) => {
         const ipv4 = String(req.params.ipv4);
@@ -314,7 +303,6 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
 
     /**
      * This route is used in order to update the ct options in the database
-     * @param {CTOptions} CTOptions The ct options in req.body.
      */
     router.put(
         '/ctoptions',
@@ -341,7 +329,6 @@ export function initConfigRouter(this: ContainerWorkspaces): void {
 
     /**
      * This route is used in order to update the init commands in the database.
-     * @param {string[]} initCommands The init commands in req.body.
      */
     router.put('/initcommands', async (req: Request, res: Response) => {
         const initCommands: string[] = req.body.init_commands;

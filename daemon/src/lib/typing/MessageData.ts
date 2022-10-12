@@ -2,8 +2,6 @@ import { CommandError, Ticket } from './types';
 
 /**
  * This class exists to validate the data of a task
- * @class
- * @classdesc This class is used to define the data field in a task
  */
 export class MessageData {
     public action: string;
@@ -26,8 +24,6 @@ export class MessageData {
 /**
  * This class exists to validate the data of a task received from an agent
  * @extends {MessageData}
- * @class
- * @classdesc This class is used to define the data field in a task received from an agent
  */
 export class MessageDataResponse extends MessageData {
     public taskid: number;
@@ -44,7 +40,6 @@ export class MessageDataResponse extends MessageData {
 
 /**
  * This interface represents every possible field of args in the MessageData class
- * @interface
  */
 interface possibleArgs {
     commands?: string[];
@@ -64,8 +59,6 @@ interface possibleArgs {
 
 /**
  * This Error class exists to be thrown when the data of a task received from an agent is invalid
- * @class
- * @classdesc This class represents an error thrown when the MessageData class receivs invalid data
  * @extends {Error}
  */
 export class InvalidMessageError extends Error {

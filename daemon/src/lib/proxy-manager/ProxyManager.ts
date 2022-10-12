@@ -196,10 +196,6 @@ export default class ProxyManager {
 
     /**
      * Method will add a container to the service proxy manager.
-     * @public
-     * @method
-     * @param {string} containerID - The container ID to proxy to.
-     * @param {string} containerIP - The container IP to proxy to.
      */
     public addContainer(containerID: number, containerIP: string): void {
         containerID;
@@ -209,7 +205,6 @@ export default class ProxyManager {
 
     /**
      * Method will remove a container from the service proxy manager.
-     * @param {string} containerID - The container ID to remove.
      */
     public removeContainer(containerID: number): void {
         containerID;
@@ -218,11 +213,6 @@ export default class ProxyManager {
 
     /**
      * Method will add a token to the service proxy manager.
-     * @public
-     * @method
-     * @param {ProxyInfo} proxyInfo - The proxy info to add.
-     * @param {string} token - The token to add.
-     * @param {number} duration - The time in seconds the token should expire in.
      */
     public addContainerAccess(
         proxyInfo: ProxyInfo,
@@ -238,9 +228,6 @@ export default class ProxyManager {
 
     /**
      * Method will remove a token from the service proxy manager.
-     * @public
-     * @method
-     * @param {string} token - The token to remove.
      */
     public removeContainerAccess(token: string): void {
         this.accessTokens.delete(token);

@@ -15,8 +15,6 @@ enum Colors {
 }
 /**
  * Print an error message to the console
- * @param  {any} message
- * @returns {void}
  */
 export function printError(message): void {
     console.log(`${Colors.Red}Error: ${Colors.Reset}${message}`);
@@ -24,8 +22,6 @@ export function printError(message): void {
 
 /**
  * Print a warning message to the console
- * @param  {any} message
- * @returns {void}
  */
 export function printWarning(message): void {
     console.log(`${Colors.Yellow}Warning:  ${Colors.Reset}${message}`);
@@ -33,8 +29,6 @@ export function printWarning(message): void {
 
 /**
  * Print a success message to the console
- * @param {any} message
- * @returns {void}
  */
 export function printSuccess(message): void {
     console.log(`${Colors.Green}Success:  ${Colors.Reset}${message}`);
@@ -42,8 +36,6 @@ export function printSuccess(message): void {
 
 /**
  * Get the configuration from the config file and retrieve the content
- * @async
- * @returns {Promise<Configuration>}
  */
 export async function readConfFile(): Promise<Configuration> {
     const fileLocation = '/etc/container-workspaces/conf.json';
@@ -65,8 +57,6 @@ export async function readConfFile(): Promise<Configuration> {
 
 /**
  * Get the encoded basic token from the Authorization header of a request
- * @param  {Request | Handshake} req
- * @returns {string}
  */
 export function getEncodedBasicToken(req: Request | Handshake): string | null {
     const headerValue = req.headers['authorization'];
@@ -76,7 +66,6 @@ export function getEncodedBasicToken(req: Request | Handshake): string | null {
 
 /**
  * Get the names of all nodes in the Proxmox cluster
- * @returns {Promise<string[]>}
  */
 export async function getNodesName(this: ProxmoxConnection): Promise<string[]> {
     const nodesArr = await this.getNodes();
@@ -86,9 +75,6 @@ export async function getNodesName(this: ProxmoxConnection): Promise<string[]> {
 
 /**
  * Check if the given IP is present in the database
- * @async
- * @param  {string} ip
- * @returns {Promise<boolean>}
  */
 export async function checkIP(
     this: ContainerWorkspaces,
@@ -106,9 +92,6 @@ export async function checkIP(
 
 /**
  * Check if the given containerID is present in the database
- * @async
- * @param  {number} containerID
- * @returns {Promise<boolean>}
  */
 export async function checkContainerID(
     this: ContainerWorkspaces,
@@ -125,9 +108,6 @@ export async function checkContainerID(
 
 /**
  * Create loggers with Log4js
- * @param  {string[]} logsName
- * @param  {string} logDir
- * @returns {Log4js}
  */
 export function createLoggers(logsName: string[], logDir: string): Log4js {
     const confObj = {
@@ -153,7 +133,6 @@ export function createLoggers(logsName: string[], logDir: string): Log4js {
 
 /**
  * Generate a random string
- * @returns {string}
  */
 export function generateID(): string {
     return (
@@ -164,7 +143,6 @@ export function generateID(): string {
 
 /**
  * Sleep for a given time in milliseconds
- * @param  {number} ms
  */
 export function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -172,8 +150,6 @@ export function sleep(ms: number): Promise<void> {
 
 /**
  * Generate a random password
- * @param  {number} length
- * @returns {string}
  */
 export function generatePassword(length: number): string {
     let result = '';
@@ -190,8 +166,6 @@ export function generatePassword(length: number): string {
 
 /**
  * Convert a netmask to a CIDR
- * @param  {string} netmask
- * @returns {number}
  */
 export function netmaskToCIDR(netmask: string): number {
     return (
@@ -206,8 +180,6 @@ export function netmaskToCIDR(netmask: string): number {
 
 /**
  * Check if a given string is a valid IP address
- * @param  {string} ip
- * @returns {boolean}
  */
 export function validateIP(ip: string): boolean {
     return /^(?!0)(?!.*\.$)((1?\d?\d|25[0-5]|2[0-4]\d)(\.|$)){4}$/.test(ip);
@@ -215,8 +187,6 @@ export function validateIP(ip: string): boolean {
 
 /**
  * Validate that a given string is between 5 and 100 characters long
- * @param  {string} password
- * @returns {boolean}
  */
 export function validatePassword(password: string): boolean {
     return password.length >= 5 && password.length <= 100;
@@ -224,8 +194,6 @@ export function validatePassword(password: string): boolean {
 
 /**
  * A handler demanding specific properties to exist in the request body
- * @param  {string[]} ...props
- * @returns {Handler}
  */
 export function requireBodyProps(...props: string[]): Handler {
     return function (req: Request, res: Response, next: NextFunction) {
@@ -243,9 +211,6 @@ export function requireBodyProps(...props: string[]): Handler {
 
 /**
  * Validate an authorization header
- * @param  {ContainerWorkspaces} this
- * @param  {string} token
- * @returns {Promise<boolean>}
  */
 export async function checkAuthToken(
     this: ContainerWorkspaces,
@@ -267,9 +232,6 @@ export async function checkAuthToken(
 
 /**
  * Wait for a specified amount of time
- * @param  {number} ms
- * @returns {Promise<void>}
- * @async
  */
 export const delay = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));

@@ -3,7 +3,6 @@ import { CTHardwareOptions } from './options';
 
 /**
  * This interface is used to define the configuration file structure
- * @interface
  */
 export interface Configuration {
     listenAddress: string;
@@ -50,7 +49,6 @@ export type httpProtocol = 'http' | 'https';
 
 /**
  * This interface is used to define a node in the PVE api
- * @interface
  */
 export interface Node {
     node: string;
@@ -69,7 +67,6 @@ export interface Node {
 
 /**
  * This interface is used to define an error report when a command is not working
- * @interface
  */
 export interface CommandError {
     command: string;
@@ -89,7 +86,6 @@ export type ResponseContainer = ContainerStatus & {
 
 /**
  * This interface is used to define an LXC container in the PVE api
- * @interface
  */
 export interface LXC {
     ostemplate: string;
@@ -157,7 +153,6 @@ export interface LXC {
 
 /**
  * This interface is used to define a network interface in the PVE api
- * @interface
  */
 export interface NetowrkInteface {
     iface: string;
@@ -180,7 +175,6 @@ export interface NetowrkInteface {
 
 /**
  * This interface is used to define a node inside a cluster in the PVE api
- * @interface
  */
 export interface ClusterNode {
     name: string;
@@ -204,7 +198,6 @@ declare global {
 
 /**
  * This interface is used to define the status of a container in the PVE api
- * @interface
  */
 export interface ContainerStatus {
     id?: `${ContainerStatus['type']}/${ContainerStatus['vmid']}`;
@@ -228,8 +221,6 @@ export interface ContainerStatus {
 
 /**
  * This interface is used to represent a PVE api response
- * @interface
- * @template T
  */
 export interface ProxmoxResponse<T> {
     data?: T;
@@ -249,7 +240,6 @@ export type status =
 
 /**
  * This interface is used to represent the result of an action performed
- * @interface
  */
 export interface ActionResult<DataType = null> {
     error?: null | string;
@@ -259,7 +249,6 @@ export interface ActionResult<DataType = null> {
 
 /**
  * This interface is used to represent the configuration in the database
- * @interface
  */
 export interface Config {
     ct_options: CTHardwareOptions;
@@ -268,7 +257,6 @@ export interface Config {
 
 /**
  * This interface is used to represent a client in the database
- * @interface
  */
 export interface SQLClient {
     client_id?: number;
