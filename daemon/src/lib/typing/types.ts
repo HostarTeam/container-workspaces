@@ -82,6 +82,11 @@ export interface CommandError {
 
 export type MessageRoutingHandler = MessageRouting[keyof MessageRouting];
 
+export type ResponseContainer = ContainerStatus & {
+    ip: string;
+    ready: boolean;
+};
+
 /**
  * This interface is used to define an LXC container in the PVE api
  * @interface

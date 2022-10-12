@@ -9,6 +9,7 @@ import {
     LXC,
     Node,
     ProxmoxResponse,
+    ResponseContainer,
     Snapshot,
     status,
     Storage,
@@ -948,6 +949,50 @@ export async function getContainerStatuses(
     });
 
     return managedCTS;
+}
+
+export async function getSpecificContainerStatuses(
+    this: ProxmoxConnection,
+    vmids: number[]
+): Promise<ResponseContainer[]> {
+    const uniqueVmids = [...new Set(vmids)];
+    const dbContainers = await this.prismaClient.container.findMany({
+        where: {
+            id: {
+                in: uniqueVmids,
+            },
+        },
+    });
+    const existingVmids = dbContainers.map((dbContainer) => dbContainer.id);
+
+    const dbContainersMap = new Map(
+        dbContainers.map((dbContainer) => [
+            dbContainer.id,
+            { ip: dbContainer.ipv4, ready: dbContainer.ready },
+        ])
+    );
+
+    const containerStatusPromises: Promise<ContainerStatus>[] = [];
+    for (const id of existingVmids) {
+        const containerPromise = this.getContainerStatus(id);
+        containerStatusPromises.push(containerPromise);
+    }
+
+    const containerStatuses = await Promise.all(containerStatusPromises);
+
+    const responseContainers: ResponseContainer[] = [];
+    for (const containerStatus of containerStatuses) {
+        if (!containerStatus) continue;
+
+        const dbContainer = dbContainersMap.get(containerStatus.vmid);
+        if (!dbContainer) continue;
+
+        responseContainers.push({
+            ...containerStatus,
+            ...dbContainer,
+        });
+    }
+    return responseContainers;
 }
 
 export async function getStorages(

@@ -58,6 +58,7 @@ import {
     setCTAsReady,
     updateIPUsedStatus,
     getClusterResources,
+    getSpecificContainerStatuses,
 } from './apiTools';
 
 export default class ProxmoxConnection {
@@ -121,6 +122,7 @@ export default class ProxmoxConnection {
     public getContainers = getContainers;
     public getClusterResources = getClusterResources;
     public getContainerStatuses = getContainerStatuses;
+    public getSpecificContainerStatuses = getSpecificContainerStatuses;
     public scoreNode = scoreNode;
     public createBackup = createBackup;
     public deleteBackup = deleteBackup;

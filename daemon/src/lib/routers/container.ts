@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express';
 import ContainerWorkspaces from '../../ContainerWorkspaces';
 import { MessageData } from '../typing/MessageData';
-import { ActionResult, ContainerStatus } from '../typing/types';
+import { ActionResult, ResponseContainer } from '../typing/types';
 import { requireBodyProps, validatePassword } from '../util/utils';
 import { ClientNotFoundError } from '../ws/commandAgent';
 
@@ -13,10 +13,7 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
      * This route is used to get the current configuration of all containers.
      */
     router.get('/', async (_, res: Response) => {
-        const containerMap: Map<
-            number,
-            Partial<ContainerStatus & { ip: string; ready: boolean }>
-        > = new Map(
+        const containerMap: Map<number, Partial<ResponseContainer>> = new Map(
             (await this.prismaClient.container.findMany()).map(
                 (dbContainer) => {
                     return [
@@ -40,6 +37,29 @@ export function initContainerRouter(this: ContainerWorkspaces): void {
         );
         res.send(Array.from(containerMap.values()));
     });
+
+    /**
+     * This route is used in order to send the container status of specified containers
+     * @param {number[]} vmids
+     */
+
+    router.patch(
+        '/specific',
+        requireBodyProps('vmids'),
+        async (req: Request, res: Response) => {
+            const vmids: number[] = req.body.vmids;
+            if (!Array.isArray(vmids)) {
+                return res.status(400).send({
+                    status: 'error',
+                    message: 'vmids must be an integer array',
+                });
+            }
+
+            res.send(
+                await this.proxmoxClient.getSpecificContainerStatuses(vmids)
+            );
+        }
+    );
 
     /**
      * @param {string} containerID
