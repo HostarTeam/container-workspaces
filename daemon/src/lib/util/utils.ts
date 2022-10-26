@@ -37,8 +37,9 @@ export function printSuccess(message): void {
 /**
  * Get the configuration from the config file and retrieve the content
  */
-export async function readConfFile(): Promise<Configuration> {
-    const fileLocation = '/etc/container-workspaces/conf.json';
+export async function readConfFile(
+    fileLocation: string
+): Promise<Configuration> {
     let fileContent = '';
     try {
         fileContent = readFileSync(fileLocation, 'utf8');
