@@ -9,11 +9,13 @@ jobs:
         name: Initialize PM2 Daemon
         runs-on: [self-hosted, stg-deployment]
         steps:
+            - name: Install PM2
+              run: npm i pm2 --location=user
             - name: Delete all pm2 processes
-              run: sudo pm2 delete all
+              run: npm exec pm2 delete all
               continue-on-error: true
             - name: Validate there is a pm2 daemon running
-              run: sudo pm2 list
+              run: npm exec pm2 list
 
     DaemonCD:
         name: Daemon CD
@@ -41,8 +43,14 @@ jobs:
               run: npm run prisma:generate
             - name: Building project
               run: npm run compile --if-present
+            - name: Write config file
+              uses: 'DamianReeves/write-file-action@master'
+              with:
+                  path: ./conf.json
+                  write-mode: overwrite
+                  contents: ${{secrets.STG_CONF}}
             - name: Start PM2 process
-              run: sudo pm2 start --name cw-daemon ./build/usr/bin/cw-daemon
+              run: sudo -u $(whoami) npm exec pm2 start ./build/usr/bin/cw-daemon --name cw-daemon --node-args "--configpath ./conf.json"
 
     AgentCD:
         name: Agent CD
@@ -69,4 +77,4 @@ jobs:
             - name: Building project
               run: npm run compile --if-present
             - name: Start PM2 process
-              run: sudo pm2 start --name cw-agent ./build/usr/bin/cw-agent
+              run: sudo -u $(whoami) npm exec pm2 start ./build/usr/bin/cw-agent --name cw-agent
