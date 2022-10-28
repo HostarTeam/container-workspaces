@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { AgentConfiguration } from './typing/types';
-import { exec, execSync } from 'child_process';
+import { exec, execFileSync, execSync } from 'child_process';
 import os from 'os';
 import { WebSocket } from 'ws';
 import { promisify } from 'util';
@@ -80,7 +80,7 @@ export function getInfoFromHostname(): {
 }
 
 export function changeSystemHostname(newHostname: string): void {
-    execSync(`hostname ${newHostname}`, {
+    execFileSync('hostname', [newHostname], {
         stdio: 'pipe',
     });
 }
