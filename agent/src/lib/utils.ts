@@ -38,12 +38,12 @@ export async function checkIfInitHadRan(
     }
 }
 
-export async function readConfFile(
+export function readConfFile(
     fileLocation = '/etc/cw/defaultconf.json'
-): Promise<AgentConfiguration> {
+): AgentConfiguration {
     let fileContent = '';
     try {
-        fileContent = await readFileSync(fileLocation, 'utf8');
+        fileContent = readFileSync(fileLocation, 'utf8');
     } catch (error: unknown) {
         printError(`Could not read from config file at ${fileLocation}`);
         process.exit(1);
