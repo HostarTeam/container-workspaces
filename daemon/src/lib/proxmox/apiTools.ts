@@ -711,6 +711,7 @@ export async function getContainerStatus(
     );
     if (!ctStatus) return null;
 
+    delete ctStatus.ha;
     return ctStatus;
 }
 
@@ -792,13 +793,13 @@ export async function getContainers(this: ProxmoxConnection): Promise<LXC[]> {
 export async function getClusterResources(
     this: ProxmoxConnection
 ): Promise<ContainerStatus[]> {
-    const vms = await this.call<ContainerStatus[]>(
-        'cluster/resources?type=vm',
-        'GET'
-    );
+    const vms = await this.call<
+        Omit<ContainerStatus, 'template' & { template: 0 | 1 }>[]
+    >('cluster/resources?type=vm', 'GET');
 
     return vms.data.map((vm) => {
         delete vm.id;
+        vm.template = !!vm.template;
         return vm;
     });
 }
@@ -816,7 +817,11 @@ export async function getContainerStatuses(
     const ctIDsQuickAccess = new Set(ctIDs.map((ct) => ct.id));
     const resources = await this.getClusterResources();
     const managedCTS = resources.filter((resource) => {
-        return resource.type === 'lxc' && ctIDsQuickAccess.has(resource.vmid);
+        return (
+            resource.type === 'lxc' &&
+            ctIDsQuickAccess.has(resource.vmid) &&
+            !resource.template
+        );
     });
 
     return managedCTS;
