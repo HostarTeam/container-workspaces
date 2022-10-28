@@ -33,7 +33,7 @@ jobs:
             - name: Lint using ESLint
               run: npm run lint --if-present
             - name: Test using Jest
-              run: npm test
+              run: npm test --if-present
 
     AgentCI:
         name: Agent CI
@@ -61,4 +61,4 @@ jobs:
             - name: Lint using ESLint
               run: npm run lint --if-present
             - name: Test using Jest
-              run: npm test
+              run: npm test --if-present
