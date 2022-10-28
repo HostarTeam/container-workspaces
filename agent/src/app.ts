@@ -29,7 +29,7 @@ async function main(): Promise<void> {
         }
     }
 
-    const config: AgentConfiguration = await readConfFile();
+    const config: AgentConfiguration = readConfFile();
     new Agent(config, services);
 }
 

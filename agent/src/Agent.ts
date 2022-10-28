@@ -7,13 +7,11 @@ import { wsCommand } from './ws/wsCommand';
 import { Task } from './lib/typing/Task';
 import passwd from 'passwd-linux';
 import { MessageDataResponse } from './lib/typing/MessageData';
-import Ticket from './lib/typing/Ticket';
 
 export default class Agent {
     public ws: WebSocket;
     public logger: Logger;
     public logFilePath: string;
-    public tickets: Map<string, Ticket> = new Map();
     private reconnectInterval: NodeJS.Timeout;
     protected handleMessage: (message: RawData) => void = handleMessage;
     protected wsCommand: (commandData: Task) => void = wsCommand;

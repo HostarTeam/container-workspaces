@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { AgentConfiguration } from './typing/types';
-import { exec, execSync } from 'child_process';
+import { exec, execFileSync, execSync } from 'child_process';
 import os from 'os';
 import { WebSocket } from 'ws';
 import { promisify } from 'util';
@@ -38,12 +38,12 @@ export async function checkIfInitHadRan(
     }
 }
 
-export async function readConfFile(
+export function readConfFile(
     fileLocation = '/etc/cw/defaultconf.json'
-): Promise<AgentConfiguration> {
+): AgentConfiguration {
     let fileContent = '';
     try {
-        fileContent = await readFileSync(fileLocation, 'utf8');
+        fileContent = readFileSync(fileLocation, 'utf8');
     } catch (error: unknown) {
         printError(`Could not read from config file at ${fileLocation}`);
         process.exit(1);
@@ -80,7 +80,7 @@ export function getInfoFromHostname(): {
 }
 
 export function changeSystemHostname(newHostname: string): void {
-    execSync(`hostname ${newHostname}`, {
+    execFileSync('hostname', [newHostname], {
         stdio: 'pipe',
     });
 }
