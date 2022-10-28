@@ -10,5 +10,6 @@
         "allowSyntheticDefaultImports": true,
         "importsNotUsedAsValues": "remove",
         "removeComments": true
-    }
+    },
+    "exclude": ["./src/**/__tests__"]
 }
