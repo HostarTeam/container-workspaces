@@ -218,7 +218,7 @@ export interface ContainerStatus {
     netin: string; // Represents the network in in bytes.
     netout: number; // Represents the network out in bytes.
     status: 'running' | 'stopped'; // Represents the state of the container.
-    template: 0 | 1; // Represents whether the container is a template
+    template: boolean; // Represents whether the container is a template
     type: 'lxc';
     uptime: number; // Represents the uptime in seconds.
     vmid: number; // Represents the container id.
