@@ -711,6 +711,7 @@ export async function getContainerStatus(
     );
     if (!ctStatus) return null;
 
+    delete ctStatus.ha;
     return ctStatus;
 }
 

@@ -200,6 +200,11 @@ declare global {
  * This interface is used to define the status of a container in the PVE api
  */
 export interface ContainerStatus {
+    /**
+     * Disregard this property, you will never see it
+     * @ignore
+     */
+    ha?: undefined | { managed: 0 | 1 };
     id?: `${ContainerStatus['type']}/${ContainerStatus['vmid']}`;
     cpu: number; // Represents the cpu usage with 0 being 0% and 1 being 100%
     maxcpu: number; // Represents the number of cpu cores
