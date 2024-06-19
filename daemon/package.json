@@ -35,7 +35,7 @@
         "mysql2": "^2.3.3",
         "node-fetch": "^2.6.6",
         "socket.io": "^4.5.2",
-        "ws": "^8.4.0",
+        "ws": "^8.17.1",
         "yargs": "^17.6.0"
     },
     "devDependencies": {
